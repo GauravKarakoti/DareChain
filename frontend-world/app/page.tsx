@@ -12,7 +12,7 @@ import { CreateDare } from "@/components/create-dare"
 import { Profile } from "@/components/profile"
 import { NotificationCenter } from "@/components/notification-center"
 import { Leaderboard } from "@/components/leaderboard"
-import { MobileStatusBar, ConnectionStatus, useHapticFeedback } from "@/components/enhanced-mobile-features"
+import { ConnectionStatus, useHapticFeedback } from "@/components/enhanced-mobile-features"
 
 export default function DareFiApp() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -62,8 +62,6 @@ export default function DareFiApp() {
 
   return (
     <div className="min-h-screen bg-background">
-      <MobileStatusBar />
-
       <ConnectionStatus />
 
       {/* Header */}

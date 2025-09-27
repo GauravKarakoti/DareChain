@@ -6,48 +6,6 @@ import { useState, useEffect, useRef } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Wifi, WifiOff, Battery } from "lucide-react"
 
-export function MobileStatusBar() {
-  const [isOnline, setIsOnline] = useState(true)
-  const [batteryLevel, setBatteryLevel] = useState(85)
-  const [signalStrength, setSignalStrength] = useState(4)
-
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true)
-    const handleOffline = () => setIsOnline(false)
-
-    window.addEventListener("online", handleOnline)
-    window.addEventListener("offline", handleOffline)
-
-    return () => {
-      window.removeEventListener("online", handleOnline)
-      window.removeEventListener("offline", handleOffline)
-    }
-  }, [])
-
-  return (
-    <div className="flex items-center justify-between px-4 py-2 bg-background/80 backdrop-blur-sm border-b border-border/50">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <span>9:41</span>
-      </div>
-      <div className="flex items-center gap-1">
-        {isOnline ? <Wifi className="w-3 h-3 text-muted-foreground" /> : <WifiOff className="w-3 h-3 text-red-500" />}
-        <div className="flex gap-0.5">
-          {[...Array(4)].map((_, i) => (
-            <div
-              key={i}
-              className={`w-1 h-2 rounded-sm ${i < signalStrength ? "bg-muted-foreground" : "bg-muted-foreground/30"}`}
-            />
-          ))}
-        </div>
-        <div className="flex items-center gap-1">
-          <Battery className="w-3 h-3 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground">{batteryLevel}%</span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export function useHapticFeedback() {
   const vibrate = (pattern: number | number[] = 50) => {
     if ("vibrate" in navigator) {
