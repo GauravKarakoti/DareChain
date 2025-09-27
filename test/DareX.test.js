@@ -1,8 +1,8 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-describe("DareChain", function () {
-  let dareChain;
+describe("DareX", function () {
+  let dareX;
   let pyusd;
   let selfProtocol;
   let owner, user1, user2, user3, treasury;
@@ -17,9 +17,9 @@ describe("DareChain", function () {
     const MockSelfProtocol = await ethers.getContractFactory("MockSelfProtocol");
     selfProtocol = await MockSelfProtocol.deploy();
 
-    // Deploy DareChain
-    const DareChain = await ethers.getContractFactory("DareChain");
-    dareChain = await DareChain.deploy(
+    // Deploy DareX
+    const DareX = await ethers.getContractFactory("DareX");
+    dareX = await DareX.deploy(
       pyusd.target,
       selfProtocol.target,
       treasury.address
@@ -36,10 +36,10 @@ describe("DareChain", function () {
     await pyusd.mint(user2.address, ethers.parseEther("1000"));
     await pyusd.mint(user3.address, ethers.parseEther("1000"));
 
-    // Approve DareChain to spend PYUSD
-    await pyusd.connect(user1).approve(dareChain.target, ethers.parseEther("1000"));
-    await pyusd.connect(user2).approve(dareChain.target, ethers.parseEther("1000"));
-    await pyusd.connect(user3).approve(dareChain.target, ethers.parseEther("1000"));
+    // Approve DareX to spend PYUSD
+    await pyusd.connect(user1).approve(dareX.target, ethers.parseEther("1000"));
+    await pyusd.connect(user2).approve(dareX.target, ethers.parseEther("1000"));
+    await pyusd.connect(user3).approve(dareX.target, ethers.parseEther("1000"));
   });
 
   describe("Dare Creation", function () {
@@ -48,15 +48,15 @@ describe("DareChain", function () {
       const deadline = Math.floor(Date.now() / 1000) + 86400; // 1 day from now
 
       await expect(
-        dareChain.connect(user1).createDare(
+        dareX.connect(user1).createDare(
           "Test Dare",
           "Test Description",
           reward,
           deadline
         )
-      ).to.emit(dareChain, "DareCreated");
+      ).to.emit(dareX, "DareCreated");
 
-      const dare = await dareChain.dares(1);
+      const dare = await dareX.dares(1);
       expect(dare.creator).to.equal(user1.address);
       expect(dare.reward).to.equal(reward);
       expect(dare.completed).to.be.false;
@@ -69,7 +69,7 @@ describe("DareChain", function () {
       const deadline = Math.floor(Date.now() / 1000) + 86400;
 
       await expect(
-        dareChain.connect(user1).createDare(
+        dareX.connect(user1).createDare(
           "Test Dare",
           "Test Description",
           reward,
@@ -84,7 +84,7 @@ describe("DareChain", function () {
       const reward = ethers.parseEther("10");
       const deadline = Math.floor(Date.now() / 1000) + 86400;
       
-      await dareChain.connect(user1).createDare(
+      await dareX.connect(user1).createDare(
         "Test Dare",
         "Test Description",
         reward,
@@ -94,17 +94,17 @@ describe("DareChain", function () {
 
     it("Should submit proof for a dare", async function () {
       await expect(
-        dareChain.connect(user2).submitProof(1, "QmProofCID123")
-      ).to.emit(dareChain, "DareSubmitted");
+        dareX.connect(user2).submitProof(1, "QmProofCID123")
+      ).to.emit(dareX, "DareSubmitted");
 
-      const submission = await dareChain.submissions(1);
+      const submission = await dareX.submissions(1);
       expect(submission.participant).to.equal(user2.address);
       expect(submission.proofCID).to.equal("QmProofCID123");
     });
 
     it("Should fail if creator tries to participate", async function () {
       await expect(
-        dareChain.connect(user1).submitProof(1, "QmProofCID123")
+        dareX.connect(user1).submitProof(1, "QmProofCID123")
       ).to.be.revertedWith("Creator cannot participate");
     });
   });
@@ -114,24 +114,24 @@ describe("DareChain", function () {
       const reward = ethers.parseEther("10");
       const deadline = Math.floor(Date.now() / 1000) + 86400;
       
-      await dareChain.connect(user1).createDare(
+      await dareX.connect(user1).createDare(
         "Test Dare",
         "Test Description",
         reward,
         deadline
       );
       
-      await dareChain.connect(user2).submitProof(1, "QmProofCID123");
+      await dareX.connect(user2).submitProof(1, "QmProofCID123");
     });
 
     it("Should place a bet on dare success", async function () {
       const betAmount = ethers.parseEther("5");
       
       await expect(
-        dareChain.connect(user3).placeBet(1, betAmount, true)
-      ).to.emit(dareChain, "BetPlaced");
+        dareX.connect(user3).placeBet(1, betAmount, true)
+      ).to.emit(dareX, "BetPlaced");
 
-      const dare = await dareChain.dares(1);
+      const dare = await dareX.dares(1);
       expect(dare.totalBetAmount).to.equal(betAmount);
       expect(dare.successBetAmount).to.equal(betAmount);
     });
@@ -142,14 +142,14 @@ describe("DareChain", function () {
       const reward = ethers.parseEther("10");
       const deadline = Math.floor(Date.now() / 1000) + 100; // Short deadline
       
-      await dareChain.connect(user1).createDare(
+      await dareX.connect(user1).createDare(
         "Test Dare",
         "Test Description",
         reward,
         deadline
       );
       
-      await dareChain.connect(user2).submitProof(1, "QmProofCID123");
+      await dareX.connect(user2).submitProof(1, "QmProofCID123");
       
       // Wait for deadline to pass
       await ethers.provider.send("evm_increaseTime", [200]);
@@ -158,10 +158,10 @@ describe("DareChain", function () {
 
     it("Should complete dare successfully", async function () {
       await expect(
-        dareChain.connect(user1).completeDare(1, true)
-      ).to.emit(dareChain, "DareCompleted");
+        dareX.connect(user1).completeDare(1, true)
+      ).to.emit(dareX, "DareCompleted");
 
-      const dare = await dareChain.dares(1);
+      const dare = await dareX.dares(1);
       expect(dare.completed).to.be.true;
       expect(dare.winner).to.equal(user2.address);
     });

@@ -3,7 +3,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Updated theme colors for DareFi - vibrant and engaging */
+  /* Updated theme colors for DareX - vibrant and engaging */
   --background: oklch(0.98 0.01 120);
   --foreground: oklch(0.15 0.02 240);
   --card: oklch(1 0 0);

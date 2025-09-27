@@ -5,10 +5,10 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IPYUSD.sol";
 import "./interfaces/ISelfProtocol.sol";
-import "./libraries/DareChainTypes.sol";
+import "./libraries/DareXTypes.sol";
 
-contract DareChain is ReentrancyGuard, Ownable {
-    using DareChainTypes for DareChainTypes.Dare;
+contract DareX is ReentrancyGuard, Ownable {
+    using DareXTypes for DareXTypes.Dare;
     
     IPYUSD public pyusdToken;
     ISelfProtocol public selfProtocol;
@@ -18,9 +18,9 @@ contract DareChain is ReentrancyGuard, Ownable {
     uint256 public platformFee = 50; // 0.5% in basis points (0.5%)
     address public treasury;
     
-    mapping(uint256 => DareChainTypes.Dare) public dares;
-    mapping(uint256 => DareChainTypes.Submission) public submissions;
-    mapping(uint256 => mapping(address => DareChainTypes.Bet)) public bets;
+    mapping(uint256 => DareXTypes.Dare) public dares;
+    mapping(uint256 => DareXTypes.Submission) public submissions;
+    mapping(uint256 => mapping(address => DareXTypes.Bet)) public bets;
     mapping(uint256 => address[]) public dareBettors;
     mapping(address => uint256) public userReputation;
     mapping(address => uint256) public userCompletedDares;
@@ -99,7 +99,7 @@ contract DareChain is ReentrancyGuard, Ownable {
         
         dareCount++;
         
-        dares[dareCount] = DareChainTypes.Dare({
+        dares[dareCount] = DareXTypes.Dare({
             id: dareCount,
             creator: msg.sender,
             title: _title,
@@ -124,11 +124,11 @@ contract DareChain is ReentrancyGuard, Ownable {
         uint256 _dareId,
         string memory _proofCID
     ) external dareExists(_dareId) dareActive(_dareId) onlyVerified {
-        DareChainTypes.Dare storage dare = dares[_dareId];
+        DareXTypes.Dare storage dare = dares[_dareId];
         require(!submissions[_dareId].exists, "Proof already submitted");
         require(msg.sender != dare.creator, "Creator cannot participate");
         
-        submissions[_dareId] = DareChainTypes.Submission({
+        submissions[_dareId] = DareXTypes.Submission({
             participant: msg.sender,
             proofCID: _proofCID,
             submittedAt: block.timestamp,
@@ -148,7 +148,7 @@ contract DareChain is ReentrancyGuard, Ownable {
         require(_amount > 0, "Bet amount must be positive");
         require(submissions[_dareId].exists, "No submission to bet on");
         
-        DareChainTypes.Dare storage dare = dares[_dareId];
+        DareXTypes.Dare storage dare = dares[_dareId];
         require(msg.sender != dare.creator, "Creator cannot bet");
         require(msg.sender != submissions[_dareId].participant, "Participant cannot bet");
         
@@ -161,7 +161,7 @@ contract DareChain is ReentrancyGuard, Ownable {
             "PYUSD transfer failed"
         );
         
-        bets[_dareId][msg.sender] = DareChainTypes.Bet({
+        bets[_dareId][msg.sender] = DareXTypes.Bet({
             better: msg.sender,
             amount: _amount,
             vote: _vote,
@@ -182,7 +182,7 @@ contract DareChain is ReentrancyGuard, Ownable {
         uint256 _dareId,
         bool _success
     ) external dareExists(_dareId) nonReentrant {
-        DareChainTypes.Dare storage dare = dares[_dareId];
+        DareXTypes.Dare storage dare = dares[_dareId];
         require(!dare.completed, "Dare already completed");
         require(block.timestamp > dare.deadline, "Dare not expired yet");
         require(submissions[_dareId].exists, "No submission exists");
@@ -232,10 +232,10 @@ contract DareChain is ReentrancyGuard, Ownable {
     }
     
     function claimBetWinnings(uint256 _dareId) external dareExists(_dareId) nonReentrant {
-        DareChainTypes.Dare storage dare = dares[_dareId];
+        DareXTypes.Dare storage dare = dares[_dareId];
         require(dare.completed, "Dare not completed");
         
-        DareChainTypes.Bet storage bet = bets[_dareId][msg.sender];
+        DareXTypes.Bet storage bet = bets[_dareId][msg.sender];
         require(bet.amount > 0, "No bet placed");
         require(!bet.claimed, "Already claimed");
         
@@ -257,8 +257,8 @@ contract DareChain is ReentrancyGuard, Ownable {
     }
     
     function calculateWinnings(uint256 _dareId, address _better) public view returns (uint256) {
-        DareChainTypes.Dare storage dare = dares[_dareId];
-        DareChainTypes.Bet storage bet = bets[_dareId][_better];
+        DareXTypes.Dare storage dare = dares[_dareId];
+        DareXTypes.Bet storage bet = bets[_dareId][_better];
         
         if (!dare.completed || bet.amount == 0) return 0;
         

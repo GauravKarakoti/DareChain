@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-library DareChainTypes {
+library DareXTypes {
     struct Dare {
         uint256 id;
         address creator;

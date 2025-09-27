@@ -1,7 +1,7 @@
 {
-  "name": "darechain",
+  "name": "darex",
   "version": "1.0.0",
-  "description": "**DareChain** is a decentralized truth-and-dare platform where users can participate in fun challenges while preserving privacy. Participants verify their identities without revealing personal information, submit proof of challenge completion, and engage in microtransactions to bet on the outcomes of others. The platform ensures fair rewards distribution using a decentralized architecture.",
+  "description": "**DareX** is a decentralized truth-and-dare platform where users can participate in fun challenges while preserving privacy. Participants verify their identities without revealing personal information, submit proof of challenge completion, and engage in microtransactions to bet on the outcomes of others. The platform ensures fair rewards distribution using a decentralized architecture.",
   "main": "index.js",
   "directories": {
     "doc": "docs"
@@ -20,14 +20,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/GauravKarakoti/DareChain.git"
+    "url": "git+https://github.com/GauravKarakoti/DareX.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/GauravKarakoti/DareChain/issues"
+    "url": "https://github.com/GauravKarakoti/DareX/issues"
   },
-  "homepage": "https://github.com/GauravKarakoti/DareChain#readme"
+  "homepage": "https://github.com/GauravKarakoti/DareX#readme"
 }

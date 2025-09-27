@@ -1,8 +1,8 @@
-# DareChain
+# DareX
 
 ## Overview
 
-**DareChain** is a decentralized truth-and-dare platform where users can participate in fun challenges while preserving privacy. Participants verify their identities without revealing personal information, submit proof of challenge completion, and engage in microtransactions to bet on the outcomes of others. The platform ensures fair rewards distribution using a decentralized architecture.
+**DareX** is a decentralized truth-and-dare platform where users can participate in fun challenges while preserving privacy. Participants verify their identities without revealing personal information, submit proof of challenge completion, and engage in microtransactions to bet on the outcomes of others. The platform ensures fair rewards distribution using a decentralized architecture.
 
 This project leverages the following technologies from ETHGlobal New Delhi sponsors:
 
@@ -13,7 +13,7 @@ This project leverages the following technologies from ETHGlobal New Delhi spons
 
 ## How It Works
 
-1. **Access Mini App**: Users open DareChain as a Mini App within the World App.
+1. **Access Mini App**: Users open DareX as a Mini App within the World App.
 2. **Wallet Login**: Users authenticate using their World App wallet.
 3. **Identity Verification**: Participants verify their identity via Self Protocol.
 4. **Create Dares**: Users or event organizers create dares with associated rewards.
@@ -43,7 +43,7 @@ This project leverages the following technologies from ETHGlobal New Delhi spons
 
 ## Getting Started
 
-1. **Open World App** and navigate to the DareChain Mini App.
+1. **Open World App** and navigate to the DareX Mini App.
 2. **Connect Wallet**: Authenticate via your World App wallet.
 3. **Verify Identity**: Complete Self Protocol verification.
 4. **Explore Dares**: Browse available dares or create a new one.

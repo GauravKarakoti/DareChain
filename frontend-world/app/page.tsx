@@ -14,7 +14,7 @@ import { NotificationCenter } from "@/components/notification-center"
 import { Leaderboard } from "@/components/leaderboard"
 import { ConnectionStatus, useHapticFeedback } from "@/components/enhanced-mobile-features"
 
-export default function DareFiApp() {
+export default function DareXApp() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isVerified, setIsVerified] = useState(false)
   const [activeTab, setActiveTab] = useState("marketplace")
@@ -71,7 +71,7 @@ export default function DareFiApp() {
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <Trophy className="w-5 h-5 text-primary-foreground" />
             </div>
-            <h1 className="text-xl font-bold text-balance">DareFi</h1>
+            <h1 className="text-xl font-bold text-balance">DareX</h1>
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -193,7 +193,7 @@ function OnboardingScreen({ onAuth }: { onAuth: () => void }) {
             <Trophy className="w-10 h-10 text-primary-foreground" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-balance">Welcome to DareFi</h1>
+            <h1 className="text-3xl font-bold text-balance">Welcome to DareX</h1>
             <p className="text-muted-foreground text-pretty leading-relaxed">
               Create, accept, and prove dares with crypto rewards. Join the community of verified challengers.
             </p>

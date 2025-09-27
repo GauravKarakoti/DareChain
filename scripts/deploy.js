@@ -19,16 +19,16 @@ async function main() {
   await selfProtocol.waitForDeployment();
   console.log("MockSelfProtocol deployed to:", await selfProtocol.getAddress());
 
-  // Deploy DareChain
-  console.log("Deploying DareChain...");
-  const DareChain = await ethers.getContractFactory("DareChain");
-  const dareChain = await DareChain.deploy(
+  // Deploy DareX
+  console.log("Deploying DareX...");
+  const DareX = await ethers.getContractFactory("DareX");
+  const dareX = await DareX.deploy(
     await pyusd.getAddress(),
     await selfProtocol.getAddress(),
     deployer.address // Treasury address
   );
-  await dareChain.waitForDeployment();
-  console.log("DareChain deployed to:", await dareChain.getAddress());
+  await dareX.waitForDeployment();
+  console.log("DareX deployed to:", await dareX.getAddress());
 
   // Setup verification for deployer
   console.log("Setting up identity verification...");
@@ -38,17 +38,17 @@ async function main() {
   console.log("Minting test PYUSD...");
   await pyusd.mint(deployer.address, ethers.parseEther("10000"));
   
-  // Approve DareChain to spend PYUSD
-  await pyusd.approve(await dareChain.getAddress(), ethers.parseEther("10000"));
+  // Approve DareX to spend PYUSD
+  await pyusd.approve(await dareX.getAddress(), ethers.parseEther("10000"));
 
   console.log("Deployment completed!");
-  console.log("DareChain address:", await dareChain.getAddress());
+  console.log("DareX address:", await dareX.getAddress());
   console.log("MockPYUSD address:", await pyusd.getAddress());
   console.log("MockSelfProtocol address:", await selfProtocol.getAddress());
 
   // Save deployment addresses to a file for frontend integration
   const addresses = {
-    dareChain: await dareChain.getAddress(),
+    dareX: await dareX.getAddress(),
     pyusd: await pyusd.getAddress(),
     selfProtocol: await selfProtocol.getAddress()
   };

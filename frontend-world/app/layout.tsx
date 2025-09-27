@@ -6,7 +6,7 @@ import { GeistMono } from "geist/font/mono"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "DareFi Mini App",
+  title: "DareX Mini App",
   description: "Create, accept, and prove dares with crypto rewards",
   generator: "v0.app",
 }

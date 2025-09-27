@@ -316,13 +316,13 @@ function DareCard({ dare, index }: { dare: Dare; index: number }) {
         await navigator.share({
           title: dare.title,
           text: dare.description,
-          url: `https://darefi.app/dare/${dare.id}`,
+          url: `https://darex.app/dare/${dare.id}`,
         })
       } catch (err) {
         console.log("Error sharing:", err)
       }
     } else {
-      navigator.clipboard.writeText(`Check out this dare: ${dare.title} - https://darefi.app/dare/${dare.id}`)
+      navigator.clipboard.writeText(`Check out this dare: ${dare.title} - https://darex.app/dare/${dare.id}`)
     }
   }
 
