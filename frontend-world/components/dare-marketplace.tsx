@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import axios from "axios"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -25,7 +26,7 @@ import {
 import { ProofSubmission } from "./proof-submission"
 import { VotingSystem } from "./voting-system"
 import { DareChat } from "./dare-chat"
-import { useHapticFeedback } from "./enhanced-mobile-features"
+import { useHapticFeedback, DareCardSkeleton } from "./enhanced-mobile-features"
 
 interface Dare {
   id: number
@@ -40,102 +41,51 @@ interface Dare {
   category: string
   location?: string
   featured?: boolean
+  likes?: number
+  comments?: number
 }
 
-const mockDares: Dare[] = [
-  {
-    id: 1,
-    title: "Dance for 30 seconds in public",
-    description:
-      "Show off your moves in a busy public space and record it! Extra points for creativity and crowd reaction.",
-    reward: 5,
-    creator: "Alice",
-    deadline: "2 days",
-    difficulty: "Easy",
-    participants: 12,
-    status: "active",
-    category: "Performance",
-    location: "Any public space",
-    featured: true,
-  },
-  {
-    id: 2,
-    title: "Learn a new language phrase",
-    description:
-      "Record yourself speaking a 10-word phrase in a language you don't know. Must include pronunciation guide.",
-    reward: 3,
-    creator: "Bob",
-    deadline: "1 week",
-    difficulty: "Medium",
-    participants: 8,
-    status: "active",
-    category: "Learning",
-  },
-  {
-    id: 3,
-    title: "Random act of kindness",
-    description: "Do something nice for a stranger and capture the moment. Show the impact of your kindness.",
-    reward: 10,
-    creator: "Charlie",
-    deadline: "3 days",
-    difficulty: "Easy",
-    participants: 25,
-    status: "voting",
-    category: "Social Good",
-    featured: true,
-  },
-  {
-    id: 4,
-    title: "Create art with recycled materials",
-    description: "Make something beautiful from trash. Show before and after photos of your materials.",
-    reward: 8,
-    creator: "Diana",
-    deadline: "5 days",
-    difficulty: "Medium",
-    participants: 15,
-    status: "active",
-    category: "Creative",
-  },
-  {
-    id: 5,
-    title: "Compliment 5 strangers genuinely",
-    description: "Spread positivity by giving genuine compliments to 5 different people. Record their reactions.",
-    reward: 6,
-    creator: "Eve",
-    deadline: "1 day",
-    difficulty: "Hard",
-    participants: 3,
-    status: "active",
-    category: "Social Good",
-  },
-]
-
 export function DareMarketplace() {
+  const [dares, setDares] = useState<Dare[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedDifficulty, setSelectedDifficulty] = useState("all")
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true) // Set initial loading to true
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState(new Date())
 
   const categories = ["all", "Performance", "Learning", "Social Good", "Creative", "Adventure"]
   const difficulties = ["all", "Easy", "Medium", "Hard"]
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true)
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    setLastUpdated(new Date())
-    setIsRefreshing(false)
+  const fetchDares = async () => {
+    // Don't set loading to true on refresh, use isRefreshing instead
+    if (!isRefreshing) setIsLoading(true)
+    try {
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/dares`)
+      setDares(response.data.data)
+      setLastUpdated(new Date())
+    } catch (error) {
+      console.error("Failed to fetch dares:", error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   useEffect(() => {
+    fetchDares()
     const interval = setInterval(() => {
       setLastUpdated(new Date())
     }, 30000)
     return () => clearInterval(interval)
   }, [])
 
-  const filteredDares = mockDares.filter((dare) => {
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    await fetchDares()
+    setIsRefreshing(false)
+  }
+
+  const filteredDares = dares.filter((dare) => {
     const matchesSearch =
       dare.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       dare.description.toLowerCase().includes(searchQuery.toLowerCase())
@@ -219,31 +169,39 @@ export function DareMarketplace() {
         </div>
       </div>
 
-      <Tabs defaultValue="featured" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mx-4">
-          <TabsTrigger value="featured" className="transition-all duration-200">
-            Featured
-          </TabsTrigger>
-          <TabsTrigger value="active" className="transition-all duration-200">
-            Active
-          </TabsTrigger>
-          <TabsTrigger value="voting" className="transition-all duration-200">
-            Voting
-          </TabsTrigger>
-        </TabsList>
+      {isLoading ? (
+        <div className="p-4 space-y-4">
+          <DareCardSkeleton />
+          <DareCardSkeleton />
+          <DareCardSkeleton />
+        </div>
+      ) : (
+        <Tabs defaultValue="featured" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mx-4">
+            <TabsTrigger value="featured" className="transition-all duration-200">
+              Featured
+            </TabsTrigger>
+            <TabsTrigger value="active" className="transition-all duration-200">
+              Active
+            </TabsTrigger>
+            <TabsTrigger value="voting" className="transition-all duration-200">
+              Voting
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="featured" className="mt-4">
-          <DareList dares={featuredDares} title="Featured Dares" />
-        </TabsContent>
+          <TabsContent value="featured" className="mt-4">
+            <DareList dares={featuredDares} title="Featured Dares" />
+          </TabsContent>
 
-        <TabsContent value="active" className="mt-4">
-          <DareList dares={activeDares} title="Active Dares" />
-        </TabsContent>
+          <TabsContent value="active" className="mt-4">
+            <DareList dares={activeDares} title="Active Dares" />
+          </TabsContent>
 
-        <TabsContent value="voting" className="mt-4">
-          <DareList dares={votingDares} title="Community Voting" />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="voting" className="mt-4">
+            <DareList dares={votingDares} title="Community Voting" />
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   )
 }
@@ -279,8 +237,8 @@ function DareCard({ dare, index }: { dare: Dare; index: number }) {
   const [isAccepting, setIsAccepting] = useState(false)
   const [isAccepted, setIsAccepted] = useState(false)
   const [isLiked, setIsLiked] = useState(false)
-  const [likeCount, setLikeCount] = useState(Math.floor(Math.random() * 20) + 5)
-  const [commentCount, setCommentCount] = useState(Math.floor(Math.random() * 15) + 2)
+  const [likeCount, setLikeCount] = useState(dare.likes || 0)
+  const [commentCount, setCommentCount] = useState(dare.comments || 0)
   const { vibrate } = useHapticFeedback()
 
   const getDifficultyColor = (difficulty: string) => {
@@ -298,15 +256,22 @@ function DareCard({ dare, index }: { dare: Dare; index: number }) {
 
   const handleAcceptDare = async () => {
     setIsAccepting(true)
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    setIsAccepted(true)
-    setIsAccepting(false)
+    try {
+      await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/dares/${dare.id}/accept`)
+      setIsAccepted(true)
+    } catch (error) {
+      console.error("Failed to accept dare:", error)
+    } finally {
+      setIsAccepting(false)
+    }
   }
 
   const handleLike = () => {
     setIsLiked(!isLiked)
     setLikeCount((prev) => (isLiked ? prev - 1 : prev + 1))
     vibrate(25)
+    // In a real app, you would also make an API call here to update the like status
+    // axios.post(`http://localhost:3001/api/dares/${dare.id}/like`);
   }
 
   const handleShare = async () => {

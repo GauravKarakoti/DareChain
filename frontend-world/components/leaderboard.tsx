@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import axios from "axios"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -23,74 +24,27 @@ interface LeaderboardUser {
 
 export function Leaderboard() {
   const [timeframe, setTimeframe] = useState("weekly")
+  const [leaderboardData, setLeaderboardData] = useState<LeaderboardUser[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  const leaderboardData: LeaderboardUser[] = [
-    {
-      id: 1,
-      name: "Sarah Kim",
-      avatar: "SK",
-      score: 2450,
-      rank: 1,
-      change: 2,
-      completedDares: 23,
-      successRate: 95,
-      totalEarned: 1250,
-      streak: 12,
-      badges: ["Top Creator", "Community Hero", "Streak Master"],
-    },
-    {
-      id: 2,
-      name: "Alex Chen",
-      avatar: "AC",
-      score: 2380,
-      rank: 2,
-      change: -1,
-      completedDares: 19,
-      successRate: 89,
-      totalEarned: 980,
-      streak: 8,
-      badges: ["Verified Pro", "Rising Star"],
-    },
-    {
-      id: 3,
-      name: "Mike Johnson",
-      avatar: "MJ",
-      score: 2290,
-      rank: 3,
-      change: 1,
-      completedDares: 21,
-      successRate: 92,
-      totalEarned: 1100,
-      streak: 5,
-      badges: ["Dare Master", "Community Choice"],
-    },
-    {
-      id: 4,
-      name: "Emma Wilson",
-      avatar: "EW",
-      score: 2150,
-      rank: 4,
-      change: 0,
-      completedDares: 17,
-      successRate: 88,
-      totalEarned: 850,
-      streak: 15,
-      badges: ["Consistency King", "Photo Pro"],
-    },
-    {
-      id: 5,
-      name: "You",
-      avatar: "YU",
-      score: 1890,
-      rank: 8,
-      change: 3,
-      completedDares: 14,
-      successRate: 85,
-      totalEarned: 720,
-      streak: 6,
-      badges: ["Rising Star", "First Timer"],
-    },
-  ]
+  useEffect(() => {
+    const fetchLeaderboardData = async () => {
+      setIsLoading(true)
+      try {
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/leaderboard?timeframe=${timeframe}`)
+        setLeaderboardData(response.data.data)
+      } catch (error) {
+        console.error(`Failed to fetch leaderboard data for timeframe ${timeframe}:`, error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchLeaderboardData()
+  }, [timeframe])
+
+  if (isLoading) {
+    return <div>Loading...</div>
+  }
 
   const getRankIcon = (rank: number) => {
     switch (rank) {

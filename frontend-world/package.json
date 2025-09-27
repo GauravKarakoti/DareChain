@@ -18,6 +18,7 @@
     "@radix-ui/react-tabs": "1.1.2",
     "@tailwindcss/postcss": "^4.1.13",
     "@worldcoin/minikit-js": "^1.9.6",
+    "axios": "^1.12.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "geist": "latest",

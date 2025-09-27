@@ -13,6 +13,7 @@ import { Profile } from "@/components/profile"
 import { NotificationCenter } from "@/components/notification-center"
 import { Leaderboard } from "@/components/leaderboard"
 import { ConnectionStatus, useHapticFeedback } from "@/components/enhanced-mobile-features"
+import { MiniKit, VerifyCommandInput, VerificationLevel, ISuccessResult } from '@worldcoin/minikit-js'
 
 export default function DareXApp() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -41,8 +42,7 @@ export default function DareXApp() {
 
   const handleAuth = () => {
     setIsAuthenticated(true)
-    // Simulate verification process with realistic timing
-    setTimeout(() => setIsVerified(true), 2000)
+    setIsVerified(true) // Set verified on successful auth
   }
 
   const unreadCount = notifications.filter((n) => n.unread).length
@@ -177,12 +177,58 @@ export default function DareXApp() {
 function OnboardingScreen({ onAuth }: { onAuth: () => void }) {
   const [isConnecting, setIsConnecting] = useState(false)
 
-  const handleConnect = () => {
-    setIsConnecting(true)
-    setTimeout(() => {
-      onAuth()
-      setIsConnecting(false)
-    }, 1500)
+  const handleVerify = async () => {
+    setIsConnecting(true);
+    if (!MiniKit.isInstalled()) {
+      alert("World App is not installed.");
+      setIsConnecting(false);
+      return;
+    }
+
+    const verifyPayload: VerifyCommandInput = {
+      action: 'darex-login', // This should be your action ID from the Developer Portal
+      signal: 'user-login-signal', // Optional additional data
+      verification_level: VerificationLevel.Orb,
+    };
+
+    try {
+      const { finalPayload } = await MiniKit.commandsAsync.verify(verifyPayload);
+      
+      if (finalPayload.status === 'error') {
+        console.error('Verification error payload', finalPayload);
+        alert('Verification failed. Please try again.');
+        setIsConnecting(false);
+        return;
+      }
+
+      // Send the proof to your backend for verification
+      const verifyResponse = await fetch('http://localhost:3001/api/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          payload: finalPayload as ISuccessResult,
+          action: 'darex-login',
+          signal: 'user-login-signal',
+        }),
+      });
+
+      const verifyResponseJson = await verifyResponse.json();
+
+      if (verifyResponse.status === 200 && verifyResponseJson.verifyRes.success) {
+        console.log('Verification success!');
+        onAuth();
+      } else {
+        console.error('Backend verification failed:', verifyResponseJson);
+        alert(`Verification failed: ${verifyResponseJson.verifyRes?.detail || 'Unknown error'}`);
+      }
+    } catch (error) {
+        console.error("An error occurred during verification:", error);
+        alert("An unexpected error occurred. Please try again.");
+    } finally {
+        setIsConnecting(false);
+    }
   }
 
   return (
@@ -203,19 +249,19 @@ function OnboardingScreen({ onAuth }: { onAuth: () => void }) {
         <Card>
           <CardHeader className="text-center pb-4">
             <CardTitle className="text-lg">Get Started</CardTitle>
-            <CardDescription>Connect with World App for secure authentication</CardDescription>
+            <CardDescription>Verify with World ID to continue</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button onClick={handleConnect} className="w-full" size="lg" disabled={isConnecting}>
+            <Button onClick={handleVerify} className="w-full" size="lg" disabled={isConnecting}>
               {isConnecting ? (
                 <>
                   <Zap className="w-4 h-4 mr-2 animate-spin" />
-                  Connecting...
+                  Verifying...
                 </>
               ) : (
                 <>
                   <Shield className="w-4 h-4 mr-2" />
-                  Connect World App
+                  Verify with World ID
                 </>
               )}
             </Button>

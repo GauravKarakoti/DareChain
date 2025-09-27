@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import axios from "axios"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -55,127 +56,41 @@ interface Activity {
   status: "success" | "pending" | "failed"
 }
 
-const mockUserStats: UserStats = {
-  daresCompleted: 12,
-  daresCreated: 3,
-  totalEarned: 45.5,
-  votingAccuracy: 87,
-  currentStreak: 5,
-  longestStreak: 8,
-  rank: 156,
-  totalUsers: 2847,
-}
-
-const mockAchievements: Achievement[] = [
-  {
-    id: "first-dare",
-    title: "First Steps",
-    description: "Complete your first dare",
-    icon: "🎯",
-    unlocked: true,
-    unlockedAt: "2 weeks ago",
-  },
-  {
-    id: "streak-5",
-    title: "On Fire",
-    description: "Complete 5 dares in a row",
-    icon: "🔥",
-    unlocked: true,
-    unlockedAt: "1 week ago",
-  },
-  {
-    id: "creator",
-    title: "Dare Creator",
-    description: "Create your first dare",
-    icon: "✨",
-    unlocked: true,
-    unlockedAt: "5 days ago",
-  },
-  {
-    id: "voter",
-    title: "Community Voice",
-    description: "Vote on 50 submissions",
-    icon: "🗳️",
-    unlocked: false,
-    progress: 23,
-    maxProgress: 50,
-  },
-  {
-    id: "streak-10",
-    title: "Unstoppable",
-    description: "Complete 10 dares in a row",
-    icon: "⚡",
-    unlocked: false,
-    progress: 5,
-    maxProgress: 10,
-  },
-  {
-    id: "big-winner",
-    title: "Big Winner",
-    description: "Win a dare worth 20+ USDC",
-    icon: "💎",
-    unlocked: false,
-  },
-]
-
-const mockActivities: Activity[] = [
-  {
-    id: "1",
-    type: "completed",
-    title: "Dance challenge",
-    description: "Completed 'Dance for 30 seconds in public'",
-    reward: 5,
-    timestamp: "2 hours ago",
-    status: "success",
-  },
-  {
-    id: "2",
-    type: "voted",
-    title: "Community voting",
-    description: "Voted on 'Random act of kindness' submissions",
-    reward: 0.5,
-    timestamp: "4 hours ago",
-    status: "success",
-  },
-  {
-    id: "3",
-    type: "created",
-    title: "New dare created",
-    description: "Created 'Learn a magic trick'",
-    reward: 0,
-    timestamp: "1 day ago",
-    status: "pending",
-  },
-  {
-    id: "4",
-    type: "won",
-    title: "Dare winner",
-    description: "Won 'Compliment strangers' dare",
-    reward: 8,
-    timestamp: "2 days ago",
-    status: "success",
-  },
-  {
-    id: "5",
-    type: "failed",
-    title: "Submission rejected",
-    description: "Submission for 'Public speaking' was not approved",
-    timestamp: "3 days ago",
-    status: "failed",
-  },
-  {
-    id: "6",
-    type: "completed",
-    title: "Art challenge",
-    description: "Completed 'Create art with recycled materials'",
-    reward: 8,
-    timestamp: "5 days ago",
-    status: "success",
-  },
-]
-
 export function Profile() {
   const [activeTab, setActiveTab] = useState("overview")
+  const [userStats, setUserStats] = useState<UserStats | null>(null)
+  const [achievements, setAchievements] = useState<Achievement[]>([])
+  const [activities, setActivities] = useState<Activity[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      setIsLoading(true)
+      try {
+        const [statsRes, achievementsRes, activitiesRes] = await Promise.all([
+          axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/profile/stats`),
+          axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/profile/achievements`),
+          axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/profile/activities`),
+        ])
+        setUserStats(statsRes.data.data)
+        setAchievements(achievementsRes.data.data)
+        setActivities(activitiesRes.data.data)
+      } catch (error) {
+        console.error("Failed to fetch profile data:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchProfileData()
+  }, [])
+
+  if (isLoading) {
+    return <div>Loading profile...</div>
+  }
+
+  if (!userStats) {
+    return <div>Could not load profile data.</div>
+  }
 
   return (
     <div className="space-y-6">
@@ -194,7 +109,7 @@ export function Profile() {
               </Badge>
               <Badge variant="outline" className="gap-1">
                 <Trophy className="w-3 h-3" />
-                Rank #{mockUserStats.rank}
+                Rank #{userStats.rank}
               </Badge>
             </div>
           </div>
@@ -203,15 +118,15 @@ export function Profile() {
         {/* Quick Stats */}
         <div className="grid grid-cols-3 gap-4">
           <Card className="text-center p-4">
-            <div className="text-2xl font-bold text-primary">{mockUserStats.daresCompleted}</div>
+            <div className="text-2xl font-bold text-primary">{userStats.daresCompleted}</div>
             <div className="text-sm text-muted-foreground">Completed</div>
           </Card>
           <Card className="text-center p-4">
-            <div className="text-2xl font-bold text-secondary">{mockUserStats.totalEarned}</div>
+            <div className="text-2xl font-bold text-secondary">{userStats.totalEarned}</div>
             <div className="text-sm text-muted-foreground">USDC Earned</div>
           </Card>
           <Card className="text-center p-4">
-            <div className="text-2xl font-bold text-accent">{mockUserStats.daresCreated}</div>
+            <div className="text-2xl font-bold text-accent">{userStats.daresCreated}</div>
             <div className="text-sm text-muted-foreground">Created</div>
           </Card>
         </div>
@@ -237,15 +152,15 @@ export function Profile() {
         </TabsList>
 
         <TabsContent value="overview" className="mt-4">
-          <ProfileOverview stats={mockUserStats} />
+          <ProfileOverview stats={userStats} />
         </TabsContent>
 
         <TabsContent value="achievements" className="mt-4">
-          <Achievements achievements={mockAchievements} />
+          <Achievements achievements={achievements} />
         </TabsContent>
 
         <TabsContent value="activity" className="mt-4">
-          <ActivityHistory activities={mockActivities} />
+          <ActivityHistory activities={activities} />
         </TabsContent>
       </Tabs>
     </div>

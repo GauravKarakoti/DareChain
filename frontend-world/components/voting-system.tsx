@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
+import axios from "axios"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -57,94 +58,48 @@ interface DareVoting {
   topSubmissions?: string[]
 }
 
-const mockVotingDare: DareVoting = {
-  id: 3,
-  title: "Random act of kindness",
-  description: "Do something nice for a stranger and capture the moment. Show the impact of your kindness.",
-  reward: 10,
-  creator: "Charlie",
-  deadline: "3 days",
-  totalSubmissions: 25,
-  votingEnds: "2 days",
-  phase: "community-voting",
-  submissions: [
-    {
-      id: "sub1",
-      userId: "user1",
-      username: "KindSoul",
-      description:
-        "I bought coffee for the person behind me in line and their reaction was priceless! They were having a tough morning and this small gesture really brightened their day.",
-      files: [
-        {
-          id: "file1",
-          type: "image",
-          url: "/person-buying-coffee-for-stranger.jpg",
-        },
-        {
-          id: "file2",
-          type: "video",
-          url: "/happy-person-receiving-free-coffee.jpg",
-          thumbnail: "/happy-person-receiving-free-coffee.jpg",
-        },
-      ],
-      votes: { yes: 18, no: 2 },
-      timestamp: "2 hours ago",
-      status: "pending",
-    },
-    {
-      id: "sub2",
-      userId: "user2",
-      username: "Helper123",
-      description:
-        "Helped an elderly lady carry her groceries to her car. She was struggling with heavy bags and I couldn't just walk by. We had a lovely chat about her grandchildren!",
-      files: [
-        {
-          id: "file3",
-          type: "image",
-          url: "/helping-elderly-person-with-groceries.jpg",
-        },
-      ],
-      votes: { yes: 15, no: 1 },
-      timestamp: "4 hours ago",
-      status: "pending",
-    },
-    {
-      id: "sub3",
-      userId: "user3",
-      username: "GoodVibes",
-      description:
-        "Left encouraging notes on random car windshields in a parking lot. Simple messages like 'You're awesome!' and 'Have a great day!' to spread positivity.",
-      files: [
-        {
-          id: "file4",
-          type: "image",
-          url: "/encouraging-notes-on-car-windshields.jpg",
-        },
-        {
-          id: "file5",
-          type: "image",
-          url: "/handwritten-positive-messages.jpg",
-        },
-      ],
-      votes: { yes: 12, no: 3 },
-      timestamp: "6 hours ago",
-      status: "pending",
-    },
-  ],
-}
-
 export function VotingSystem({ dareId }: { dareId?: number }) {
   const [currentSubmissionIndex, setCurrentSubmissionIndex] = useState(0)
   const [votedSubmissions, setVotedSubmissions] = useState<Set<string>>(new Set())
-  const [dare] = useState<DareVoting>(mockVotingDare)
+  const [dare, setDare] = useState<DareVoting | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-  const currentSubmission = dare.submissions[currentSubmissionIndex]
+  useEffect(() => {
+    if (dareId) {
+      const fetchDareVotingData = async () => {
+        setIsLoading(true)
+        try {
+          const response = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/dares/${dareId}/voting`)
+          setDare(response.data.data)
+        } catch (error) {
+          console.error(`Failed to fetch voting data for dare ${dareId}:`, error)
+        } finally {
+          setIsLoading(false)
+        }
+      }
+      fetchDareVotingData()
+    }
+  }, [dareId])
 
-  const handleVote = (submissionId: string, vote: "yes" | "no") => {
-    setVotedSubmissions((prev) => new Set(prev).add(submissionId))
-    // In real app, this would make an API call
-    console.log(`Voted ${vote} on submission ${submissionId}`)
+  const handleVote = async (submissionId: string, vote: "yes" | "no") => {
+    try {
+      await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/submissions/${submissionId}/vote`, { vote })
+      setVotedSubmissions((prev) => new Set(prev).add(submissionId))
+      console.log(`Voted ${vote} on submission ${submissionId}`)
+    } catch (error) {
+      console.error(`Failed to vote on submission ${submissionId}:`, error)
+    }
   }
+
+  if (isLoading) {
+    return <div>Loading...</div>
+  }
+
+  if (!dare) {
+    return <div>Dare not found or no submissions available for voting.</div>
+  }
+  
+  const currentSubmission = dare.submissions[currentSubmissionIndex]
 
   const nextSubmission = () => {
     if (currentSubmissionIndex < dare.submissions.length - 1) {

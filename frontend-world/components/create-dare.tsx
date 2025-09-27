@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import axios from "axios"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -86,12 +87,28 @@ export function CreateDare() {
     if (!validateForm()) return
 
     setIsSubmitting(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    setIsSubmitting(false)
-
-    // Reset form or redirect
-    alert("Dare created successfully!")
+    try {
+      await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/dares`, formData);
+      alert("Dare created successfully!");
+      // Optionally reset form or redirect
+      setFormData({
+        title: "",
+        description: "",
+        category: "",
+        difficulty: "",
+        reward: "",
+        deadline: "",
+        location: "",
+        requiresLocation: false,
+        featured: false,
+      });
+      setShowPreview(false);
+    } catch (error) {
+      console.error("Failed to create dare:", error);
+      alert("Failed to create dare. See console for details.");
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const updateFormData = (field: keyof DareFormData, value: string | boolean) => {
