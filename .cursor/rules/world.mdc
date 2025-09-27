@@ -1,0 +1,21 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+This is a World App miniapp project using:
+- MiniKit SDK for World App integration
+- World ID for human verification
+- World Chain for blockchain interactions
+- TypeScript/React for frontend
+- Next.js API routes for backend
+
+Key patterns:
+- Always check MiniKit.isInstalled() before SDK calls
+- Use verification_level: VerificationLevel.Orb for highest security
+- Handle nullifier hashes for sybil resistance
+- Use World Chain (Chain ID 480/4801) for transactions
+- Follow mobile-first design principles
+
+Reference official docs: docs.world.org/mini-apps
