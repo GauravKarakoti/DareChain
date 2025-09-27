@@ -1,18 +1,19 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Tabs, TabsContent } from "@/components/ui/tabs"
+import axios from "axios"
+import { Button } from "../components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
+import { Badge } from "../components/ui/badge"
+import { Avatar, AvatarFallback } from "../components/ui/avatar"
+import { Tabs, TabsContent } from "../components/ui/tabs"
 import { Shield, Plus, Trophy, Users, Bell, Zap, Medal } from "lucide-react"
-import { DareMarketplace } from "@/components/dare-marketplace"
-import { CreateDare } from "@/components/create-dare"
-import { Profile } from "@/components/profile"
-import { NotificationCenter } from "@/components/notification-center"
-import { Leaderboard } from "@/components/leaderboard"
-import { ConnectionStatus, useHapticFeedback } from "@/components/enhanced-mobile-features"
+import { DareMarketplace } from "../components/dare-marketplace"
+import { CreateDare } from "../components/create-dare"
+import { Profile } from "../components/profile"
+import { NotificationCenter } from "../components/notification-center"
+import { Leaderboard } from "../components/leaderboard"
+import { ConnectionStatus, useHapticFeedback } from "../components/enhanced-mobile-features"
 import { MiniKit, VerifyCommandInput, VerificationLevel, ISuccessResult } from '@worldcoin/minikit-js'
 
 export default function DareXApp() {
@@ -186,8 +187,7 @@ function OnboardingScreen({ onAuth }: { onAuth: () => void }) {
     }
 
     const verifyPayload: VerifyCommandInput = {
-      action: 'darex-login', // This should be your action ID from the Developer Portal
-      signal: 'user-login-signal', // Optional additional data
+      action: 'darexlogin', 
       verification_level: VerificationLevel.Orb,
     };
 
@@ -201,22 +201,15 @@ function OnboardingScreen({ onAuth }: { onAuth: () => void }) {
         return;
       }
 
-      // Send the proof to your backend for verification
-      const verifyResponse = await fetch('http://localhost:3001/api/verify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          payload: finalPayload as ISuccessResult,
-          action: 'darex-login',
-          signal: 'user-login-signal',
-        }),
+      // Send the proof to your backend for verification using axios
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/verify`, {
+        payload: finalPayload as ISuccessResult,
+        action: 'darexlogin',
       });
 
-      const verifyResponseJson = await verifyResponse.json();
+      const verifyResponseJson = response.data;
 
-      if (verifyResponse.status === 200 && verifyResponseJson.verifyRes.success) {
+      if (response.status === 200 && verifyResponseJson.verifyRes.success) {
         console.log('Verification success!');
         onAuth();
       } else {
@@ -224,8 +217,13 @@ function OnboardingScreen({ onAuth }: { onAuth: () => void }) {
         alert(`Verification failed: ${verifyResponseJson.verifyRes?.detail || 'Unknown error'}`);
       }
     } catch (error) {
-        console.error("An error occurred during verification:", error);
-        alert("An unexpected error occurred. Please try again.");
+        if (axios.isAxiosError(error)) {
+          console.error("An axios error occurred during verification:", error.response?.data || error.message);
+          alert(`Verification request failed: ${error.response?.data?.verifyRes?.detail || error.message}`);
+        } else {
+          console.error("An unexpected error occurred during verification:", error);
+          alert("An unexpected error occurred. Please try again.");
+        }
     } finally {
         setIsConnecting(false);
     }

@@ -12,7 +12,7 @@ const PORT = 3001;
 
 // VERIFY ENDPOINT (For Worldcoin Login)
 app.post("/api/verify", async (req, res) => {
-    const { payload, action, signal } = req.body;
+    const { payload, action } = req.body;
     const app_id = process.env.APP_ID;
 
     if (!app_id) {
@@ -20,7 +20,7 @@ app.post("/api/verify", async (req, res) => {
     }
 
     try {
-        const verifyRes = await verifyCloudProof(payload, app_id, action, signal);
+        const verifyRes = await verifyCloudProof(payload, app_id, action);
         
         if (verifyRes.success) {
             // This is where you would perform actions for a verified user,
