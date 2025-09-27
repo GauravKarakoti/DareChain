@@ -4,6 +4,7 @@ import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 // import { Analytics } from '@vercel/analytics/next'
 import "./globals.css"
+import { MiniKitProvider } from "@worldcoin/minikit-js/minikit-provider";
 
 export const metadata: Metadata = {
   title: "DareX Mini App",
@@ -18,19 +19,21 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        {children}
-        {process.env.NODE_ENV === "production" && (
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `
-                // Vercel Analytics placeholder - only loads in production
-                console.log('[v0] Analytics would load in production');
-              `,
-            }}
-          />
-        )}
-      </body>
+      <MiniKitProvider>
+        <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
+          {children}
+          {process.env.NODE_ENV === "production" && (
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `
+                  // Vercel Analytics placeholder - only loads in production
+                  console.log('[v0] Analytics would load in production');
+                `,
+              }}
+            />
+          )}
+        </body>
+      </MiniKitProvider>
     </html>
   )
 }

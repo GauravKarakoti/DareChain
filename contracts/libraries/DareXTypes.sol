@@ -13,16 +13,11 @@ library DareXTypes {
         bool completed;
         address winner;
         string proofCID; // Filecoin CID for proof
-        uint256 totalBetAmount;
-        uint256 successBetAmount;
+
+        // +++ VOTING FIELDS ADDED +++
+        uint256 forVotes;      // Votes for success
+        uint256 againstVotes;  // Votes for failure
         uint256 participantCount;
-    }
-    
-    struct Bet {
-        address better;
-        uint256 amount;
-        bool vote; // true = success, false = fail
-        bool claimed;
     }
     
     struct Submission {
