@@ -1,8 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const db = require('./database.js');
-const { verifyCloudProof } = require('@worldcoin/minikit-js');
-require('dotenv').config(); // Load environment variables
+require('dotenv').config(); // Still useful for other potential secrets
 
 const app = express();
 app.use(cors());
@@ -10,69 +9,7 @@ app.use(express.json());
 
 const PORT = 3001;
 
-// VERIFY ENDPOINT (For Worldcoin Login)
-app.post("/api/verify", async (req, res) => {
-    const { payload, action } = req.body;
-    const app_id = process.env.APP_ID;
-
-    if (!app_id) {
-        return res.status(500).json({ error: "APP_ID not set in the environment variables." });
-    }
-
-    try {
-        const verifyRes = await verifyCloudProof(payload, app_id, action);
-        
-        if (verifyRes.success) {
-            // This is where you would perform actions for a verified user,
-            // like creating a user record in your database using the nullifier_hash.
-            console.log(`Proof verified for nullifier: ${payload.nullifier_hash}`);
-            
-            return res.status(200).json({ verifyRes });
-        } else {
-            // This handles verification errors from Worldcoin's side.
-            return res.status(400).json({ verifyRes });
-        }
-    } catch (error) {
-        console.error("Verification failed:", error);
-        return res.status(500).json({ error: "Internal server error during verification." });
-    }
-});
-
-// GET ALL DARES
-app.get("/api/dares", (req, res) => {
-    const sql = "SELECT * FROM dares";
-    db.all(sql, [], (err, rows) => {
-        if (err) {
-            res.status(400).json({ "error": err.message });
-            return;
-        }
-        res.json({
-            "message": "success",
-            "data": rows
-        });
-    });
-});
-
-// CREATE A NEW DARE
-app.post("/api/dares", (req, res) => {
-    const { title, description, category, difficulty, reward, deadline, location, requiresLocation, featured } = req.body;
-    const sql = `INSERT INTO dares (title, description, reward, creator, deadline, difficulty, participants, status, category, location, featured) VALUES (?,?,?,?,?,?,?,?,?,?,?)`;
-    // In a real app, the creator would be linked to the verified user's ID
-    const params = [title, description, reward, "You", deadline, difficulty, 0, "active", category, requiresLocation ? location : null, featured || false];
-    
-    db.run(sql, params, function (err, result) {
-        if (err) {
-            res.status(400).json({ "error": err.message });
-            return;
-        }
-        res.status(201).json({
-            "message": "success",
-            "data": { id: this.lastID, ...req.body }
-        });
-    });
-});
-
-// These should be replaced with real database logic as you build out the features.
+// These can remain for now as they are not contract-related.
 
 app.get("/api/dares/:id/voting", (req, res) => {
     res.json({
@@ -87,7 +24,7 @@ app.get("/api/dares/:id/voting", (req, res) => {
             totalSubmissions: 25,
             votingEnds: "2 days",
             phase: "community-voting",
-            submissions: [] // In a real app, you would query the submissions table
+            submissions: []
         }
     });
 });
@@ -104,7 +41,6 @@ app.get("/api/leaderboard", (req, res) => {
 });
 
 app.get("/api/profile/stats", (req, res) => {
-    // In a real app, you'd get the user ID from a JWT token, not a hardcoded query
     const sql = "SELECT * FROM users WHERE username = 'user'";
     db.get(sql, [], (err, row) => {
         if (err || !row) {
@@ -112,7 +48,7 @@ app.get("/api/profile/stats", (req, res) => {
         }
         res.json({
             "message": "success",
-            "data": { ...row, totalUsers: 2847 } // totalUsers could be a separate query
+            "data": { ...row, totalUsers: 2847 }
         });
     });
 });

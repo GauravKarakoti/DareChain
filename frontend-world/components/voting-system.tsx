@@ -23,6 +23,8 @@ import {
   Star,
   CheckCircle,
 } from "lucide-react"
+import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { darexAbi, darexContractAddress } from '@/lib/contracts';
 
 interface Submission {
   id: string
@@ -64,6 +66,9 @@ export function VotingSystem({ dareId }: { dareId?: number }) {
   const [dare, setDare] = useState<DareVoting | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  const { data: completeDareHash, writeContract: completeDare } = useWriteContract();
+  const { isLoading: isCompleting, isSuccess: isCompleted } = useWaitForTransactionReceipt({ hash: completeDareHash });
+
   useEffect(() => {
     if (dareId) {
       const fetchDareVotingData = async () => {
@@ -91,12 +96,39 @@ export function VotingSystem({ dareId }: { dareId?: number }) {
     }
   }
 
+  const handleFinalize = () => {
+    if (!dareId) return;
+    completeDare({
+      abi: darexAbi,
+      address: darexContractAddress,
+      functionName: 'completeDare',
+      args: [BigInt(dareId)]
+    })
+  }
+
   if (isLoading) {
     return <div>Loading...</div>
   }
 
-  if (!dare) {
-    return <div>Dare not found or no submissions available for voting.</div>
+  if (!dare || dare.submissions.length === 0) {
+    return (
+        <div className="p-4 space-y-4">
+             <h2 className="text-2xl font-bold text-balance">Community Voting</h2>
+            <p className="text-muted-foreground">This dare has no submissions for voting yet.</p>
+             <Card>
+                <CardHeader>
+                    <CardTitle>Finalize Dare</CardTitle>
+                    <CardDescription>Once the voting period is over, the dare can be finalized to distribute rewards.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button onClick={handleFinalize} disabled={isCompleting} className="w-full">
+                        {isCompleting ? 'Distributing Rewards...' : 'Finalize & Distribute Rewards'}
+                    </Button>
+                    {isCompleted && <p className="text-green-500 text-center mt-2">Rewards have been distributed successfully!</p>}
+                </CardContent>
+            </Card>
+        </div>
+    );
   }
   
   const currentSubmission = dare.submissions[currentSubmissionIndex]
@@ -115,14 +147,11 @@ export function VotingSystem({ dareId }: { dareId?: number }) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="p-4 space-y-4">
         <div className="space-y-2">
           <h2 className="text-2xl font-bold text-balance">Community Voting</h2>
           <p className="text-muted-foreground">Help select the top 10 submissions for this dare</p>
         </div>
-
-        {/* Dare Info */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between gap-3">
@@ -178,6 +207,19 @@ export function VotingSystem({ dareId }: { dareId?: number }) {
           <Leaderboard submissions={dare.submissions} />
         </TabsContent>
       </Tabs>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Finalize Dare</CardTitle>
+                <CardDescription>Once the voting period is over, the dare can be finalized to distribute rewards.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Button onClick={handleFinalize} disabled={isCompleting} className="w-full">
+                    {isCompleting ? 'Distributing Rewards...' : 'Finalize & Distribute Rewards'}
+                </Button>
+                {isCompleted && <p className="text-green-500 text-center mt-2">Rewards have been distributed successfully!</p>}
+            </CardContent>
+        </Card>
     </div>
   )
 }
@@ -213,7 +255,6 @@ function VotingInterface({
 
   return (
     <div className="p-4 space-y-6">
-      {/* Progress */}
       <div className="space-y-2">
         <div className="flex items-center justify-between text-sm">
           <span>
@@ -223,8 +264,6 @@ function VotingInterface({
         </div>
         <Progress value={((currentIndex + 1) / totalSubmissions) * 100} className="w-full" />
       </div>
-
-      {/* Submission Card */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center gap-3">
@@ -243,11 +282,9 @@ function VotingInterface({
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {/* Media Viewer */}
           {submission.files.length > 0 && (
             <div className="space-y-3">
               <MediaViewer file={currentFile} />
-
               {submission.files.length > 1 && (
                 <div className="flex items-center justify-between">
                   <Button
@@ -278,38 +315,12 @@ function VotingInterface({
               )}
             </div>
           )}
-
-          {/* Description */}
           <div className="space-y-2">
             <h4 className="font-medium">Description</h4>
             <p className="text-sm text-muted-foreground leading-relaxed">{submission.description}</p>
           </div>
-
-          {/* Current Votes */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between text-sm">
-              <span>Community Votes</span>
-              <span>{totalVotes} total votes</span>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <ThumbsUp className="w-4 h-4 text-green-500" />
-                  <span>Yes ({submission.votes.yes})</span>
-                </div>
-                <span>{yesPercentage.toFixed(0)}%</span>
-              </div>
-              <Progress value={yesPercentage} className="w-full" />
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <ThumbsDown className="w-4 h-4 text-red-500" />
-                <span>No ({submission.votes.no})</span>
-              </div>
-            </div>
-          </div>
         </CardContent>
       </Card>
-
-      {/* Voting Actions */}
       <div className="space-y-4">
         {!hasVoted ? (
           <div className="flex gap-3">
@@ -337,8 +348,6 @@ function VotingInterface({
             </div>
           </div>
         )}
-
-        {/* Navigation */}
         <div className="flex gap-3">
           <Button variant="outline" onClick={onPrev} disabled={!canGoPrev} className="flex-1 bg-transparent">
             <ChevronLeft className="w-4 h-4 mr-2" />

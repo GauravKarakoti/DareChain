@@ -2,18 +2,18 @@
 
 import { useState } from "react"
 import axios from "axios"
-import { Button } from "../components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
-import { Badge } from "../components/ui/badge"
-import { Avatar, AvatarFallback } from "../components/ui/avatar"
-import { Tabs, TabsContent } from "../components/ui/tabs"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { Shield, Plus, Trophy, Users, Bell, Zap, Medal } from "lucide-react"
-import { DareMarketplace } from "../components/dare-marketplace"
-import { CreateDare } from "../components/create-dare"
-import { Profile } from "../components/profile"
-import { NotificationCenter } from "../components/notification-center"
-import { Leaderboard } from "../components/leaderboard"
-import { ConnectionStatus, useHapticFeedback } from "../components/enhanced-mobile-features"
+import { DareMarketplace } from "@/components/dare-marketplace"
+import { CreateDare } from "@/components/create-dare"
+import { Profile } from "@/components/profile"
+import { NotificationCenter } from "@/components/notification-center"
+import { Leaderboard } from "@/components/leaderboard"
+import { ConnectionStatus, useHapticFeedback } from "@/components/enhanced-mobile-features"
 import { MiniKit, VerifyCommandInput, VerificationLevel, ISuccessResult } from '@worldcoin/minikit-js'
 
 export default function DareXApp() {
@@ -187,7 +187,8 @@ function OnboardingScreen({ onAuth }: { onAuth: () => void }) {
     }
 
     const verifyPayload: VerifyCommandInput = {
-      action: 'darexlogin', 
+      action: 'darexlogin',
+      signal: 'user-login-signal',
       verification_level: VerificationLevel.Orb,
     };
 
@@ -201,15 +202,18 @@ function OnboardingScreen({ onAuth }: { onAuth: () => void }) {
         return;
       }
 
-      // Send the proof to your backend for verification using axios
-      const response = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/verify`, {
+      // Send the proof to your frontend's API route
+      const response = await axios.post(`/api/verify`, {
         payload: finalPayload as ISuccessResult,
+        signal: 'user-login-signal',
         action: 'darexlogin',
       });
 
       const verifyResponseJson = response.data;
+      console.log('Backend verification response:', verifyResponseJson);
 
-      if (response.status === 200 && verifyResponseJson.verifyRes.success) {
+      // if (response.status === 200 && verifyResponseJson.verifyRes.success) {
+      if (response.status === 200) {
         console.log('Verification success!');
         onAuth();
       } else {
@@ -219,7 +223,7 @@ function OnboardingScreen({ onAuth }: { onAuth: () => void }) {
     } catch (error) {
         if (axios.isAxiosError(error)) {
           console.error("An axios error occurred during verification:", error.response?.data || error.message);
-          alert(`Verification request failed: ${error.response?.data?.verifyRes?.detail || error.message}`);
+          alert(`Verification request failed: ${error.response?.data?.error || error.message}`);
         } else {
           console.error("An unexpected error occurred during verification:", error);
           alert("An unexpected error occurred. Please try again.");
