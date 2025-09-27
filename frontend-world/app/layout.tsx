@@ -1,35 +1,36 @@
-import './globals.css'
-import { Inter } from 'next/font/google'
-import Navbar from '@/components/layout/Navbar'
-import { Web3Provider }from '@/components/providers/Web3Provider'
-import { MiniKitProvider } from "@worldcoin/minikit-js/minikit-provider";
+import type React from "react"
+import type { Metadata } from "next"
+import { GeistSans } from "geist/font/sans"
+import { GeistMono } from "geist/font/mono"
+// import { Analytics } from '@vercel/analytics/next'
+import "./globals.css"
 
-const inter = Inter({ subsets: ['latin'] })
-
-export const metadata = {
-  title: 'DareChain - Decentralized Truth & Dare',
-  description: 'Participate in fun challenges while preserving privacy',
+export const metadata: Metadata = {
+  title: "DareFi Mini App",
+  description: "Create, accept, and prove dares with crypto rewards",
+  generator: "v0.app",
 }
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode
-}) {
+}>) {
   return (
     <html lang="en">
-      <MiniKitProvider>
-        <body className={inter.className}>
-          <Web3Provider>
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-              <Navbar />
-              <main className="container mx-auto px-4 py-8">
-                {children}
-              </main>
-            </div>
-          </Web3Provider>
-        </body>
-      </MiniKitProvider>
+      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
+        {children}
+        {process.env.NODE_ENV === "production" && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                // Vercel Analytics placeholder - only loads in production
+                console.log('[v0] Analytics would load in production');
+              `,
+            }}
+          />
+        )}
+      </body>
     </html>
   )
 }

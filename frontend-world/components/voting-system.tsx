@@ -1,0 +1,525 @@
+"use client"
+
+import { useState, useRef } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Trophy,
+  Clock,
+  Users,
+  ThumbsUp,
+  ThumbsDown,
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  ChevronLeft,
+  ChevronRight,
+  Star,
+  CheckCircle,
+} from "lucide-react"
+
+interface Submission {
+  id: string
+  userId: string
+  username: string
+  description: string
+  files: {
+    id: string
+    type: "image" | "video"
+    url: string
+    thumbnail?: string
+  }[]
+  votes: {
+    yes: number
+    no: number
+  }
+  userVote?: "yes" | "no"
+  timestamp: string
+  status: "pending" | "approved" | "rejected"
+}
+
+interface DareVoting {
+  id: number
+  title: string
+  description: string
+  reward: number
+  creator: string
+  deadline: string
+  totalSubmissions: number
+  votingEnds: string
+  submissions: Submission[]
+  phase: "community-voting" | "organizer-selection" | "completed"
+  topSubmissions?: string[]
+}
+
+const mockVotingDare: DareVoting = {
+  id: 3,
+  title: "Random act of kindness",
+  description: "Do something nice for a stranger and capture the moment. Show the impact of your kindness.",
+  reward: 10,
+  creator: "Charlie",
+  deadline: "3 days",
+  totalSubmissions: 25,
+  votingEnds: "2 days",
+  phase: "community-voting",
+  submissions: [
+    {
+      id: "sub1",
+      userId: "user1",
+      username: "KindSoul",
+      description:
+        "I bought coffee for the person behind me in line and their reaction was priceless! They were having a tough morning and this small gesture really brightened their day.",
+      files: [
+        {
+          id: "file1",
+          type: "image",
+          url: "/person-buying-coffee-for-stranger.jpg",
+        },
+        {
+          id: "file2",
+          type: "video",
+          url: "/happy-person-receiving-free-coffee.jpg",
+          thumbnail: "/happy-person-receiving-free-coffee.jpg",
+        },
+      ],
+      votes: { yes: 18, no: 2 },
+      timestamp: "2 hours ago",
+      status: "pending",
+    },
+    {
+      id: "sub2",
+      userId: "user2",
+      username: "Helper123",
+      description:
+        "Helped an elderly lady carry her groceries to her car. She was struggling with heavy bags and I couldn't just walk by. We had a lovely chat about her grandchildren!",
+      files: [
+        {
+          id: "file3",
+          type: "image",
+          url: "/helping-elderly-person-with-groceries.jpg",
+        },
+      ],
+      votes: { yes: 15, no: 1 },
+      timestamp: "4 hours ago",
+      status: "pending",
+    },
+    {
+      id: "sub3",
+      userId: "user3",
+      username: "GoodVibes",
+      description:
+        "Left encouraging notes on random car windshields in a parking lot. Simple messages like 'You're awesome!' and 'Have a great day!' to spread positivity.",
+      files: [
+        {
+          id: "file4",
+          type: "image",
+          url: "/encouraging-notes-on-car-windshields.jpg",
+        },
+        {
+          id: "file5",
+          type: "image",
+          url: "/handwritten-positive-messages.jpg",
+        },
+      ],
+      votes: { yes: 12, no: 3 },
+      timestamp: "6 hours ago",
+      status: "pending",
+    },
+  ],
+}
+
+export function VotingSystem({ dareId }: { dareId?: number }) {
+  const [currentSubmissionIndex, setCurrentSubmissionIndex] = useState(0)
+  const [votedSubmissions, setVotedSubmissions] = useState<Set<string>>(new Set())
+  const [dare] = useState<DareVoting>(mockVotingDare)
+
+  const currentSubmission = dare.submissions[currentSubmissionIndex]
+
+  const handleVote = (submissionId: string, vote: "yes" | "no") => {
+    setVotedSubmissions((prev) => new Set(prev).add(submissionId))
+    // In real app, this would make an API call
+    console.log(`Voted ${vote} on submission ${submissionId}`)
+  }
+
+  const nextSubmission = () => {
+    if (currentSubmissionIndex < dare.submissions.length - 1) {
+      setCurrentSubmissionIndex(currentSubmissionIndex + 1)
+    }
+  }
+
+  const prevSubmission = () => {
+    if (currentSubmissionIndex > 0) {
+      setCurrentSubmissionIndex(currentSubmissionIndex - 1)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="p-4 space-y-4">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-balance">Community Voting</h2>
+          <p className="text-muted-foreground">Help select the top 10 submissions for this dare</p>
+        </div>
+
+        {/* Dare Info */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1 flex-1">
+                <CardTitle className="text-lg leading-tight text-balance">{dare.title}</CardTitle>
+                <CardDescription className="text-pretty leading-relaxed">{dare.description}</CardDescription>
+              </div>
+              <Badge variant="secondary" className="gap-1">
+                <Trophy className="w-3 h-3" />
+                {dare.reward} USDC
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1">
+                  <Users className="w-4 h-4 text-muted-foreground" />
+                  <span>{dare.totalSubmissions} submissions</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <span>Voting ends in {dare.votingEnds}</span>
+                </div>
+              </div>
+              <Badge variant="outline">Community Phase</Badge>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Tabs defaultValue="vote" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mx-4">
+          <TabsTrigger value="vote">Vote on Submissions</TabsTrigger>
+          <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="vote" className="mt-4">
+          <VotingInterface
+            submission={currentSubmission}
+            currentIndex={currentSubmissionIndex}
+            totalSubmissions={dare.submissions.length}
+            onVote={handleVote}
+            onNext={nextSubmission}
+            onPrev={prevSubmission}
+            hasVoted={votedSubmissions.has(currentSubmission?.id)}
+            canGoNext={currentSubmissionIndex < dare.submissions.length - 1}
+            canGoPrev={currentSubmissionIndex > 0}
+          />
+        </TabsContent>
+
+        <TabsContent value="leaderboard" className="mt-4">
+          <Leaderboard submissions={dare.submissions} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
+
+function VotingInterface({
+  submission,
+  currentIndex,
+  totalSubmissions,
+  onVote,
+  onNext,
+  onPrev,
+  hasVoted,
+  canGoNext,
+  canGoPrev,
+}: {
+  submission: Submission
+  currentIndex: number
+  totalSubmissions: number
+  onVote: (id: string, vote: "yes" | "no") => void
+  onNext: () => void
+  onPrev: () => void
+  hasVoted: boolean
+  canGoNext: boolean
+  canGoPrev: boolean
+}) {
+  const [currentFileIndex, setCurrentFileIndex] = useState(0)
+
+  if (!submission) return null
+
+  const currentFile = submission.files[currentFileIndex]
+  const totalVotes = submission.votes.yes + submission.votes.no
+  const yesPercentage = totalVotes > 0 ? (submission.votes.yes / totalVotes) * 100 : 0
+
+  return (
+    <div className="p-4 space-y-6">
+      {/* Progress */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-sm">
+          <span>
+            Submission {currentIndex + 1} of {totalSubmissions}
+          </span>
+          <span>{Math.round(((currentIndex + 1) / totalSubmissions) * 100)}% complete</span>
+        </div>
+        <Progress value={((currentIndex + 1) / totalSubmissions) * 100} className="w-full" />
+      </div>
+
+      {/* Submission Card */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-3">
+            <Avatar className="w-10 h-10">
+              <AvatarFallback>{submission.username[0].toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div className="space-y-1 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{submission.username}</span>
+                <Badge variant="outline" className="text-xs">
+                  {submission.timestamp}
+                </Badge>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          {/* Media Viewer */}
+          {submission.files.length > 0 && (
+            <div className="space-y-3">
+              <MediaViewer file={currentFile} />
+
+              {submission.files.length > 1 && (
+                <div className="flex items-center justify-between">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentFileIndex(Math.max(0, currentFileIndex - 1))}
+                    disabled={currentFileIndex === 0}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <div className="flex gap-1">
+                    {submission.files.map((_, index) => (
+                      <div
+                        key={index}
+                        className={`w-2 h-2 rounded-full ${index === currentFileIndex ? "bg-primary" : "bg-muted"}`}
+                      />
+                    ))}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentFileIndex(Math.min(submission.files.length - 1, currentFileIndex + 1))}
+                    disabled={currentFileIndex === submission.files.length - 1}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Description */}
+          <div className="space-y-2">
+            <h4 className="font-medium">Description</h4>
+            <p className="text-sm text-muted-foreground leading-relaxed">{submission.description}</p>
+          </div>
+
+          {/* Current Votes */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span>Community Votes</span>
+              <span>{totalVotes} total votes</span>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <ThumbsUp className="w-4 h-4 text-green-500" />
+                  <span>Yes ({submission.votes.yes})</span>
+                </div>
+                <span>{yesPercentage.toFixed(0)}%</span>
+              </div>
+              <Progress value={yesPercentage} className="w-full" />
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <ThumbsDown className="w-4 h-4 text-red-500" />
+                <span>No ({submission.votes.no})</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Voting Actions */}
+      <div className="space-y-4">
+        {!hasVoted ? (
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1 border-red-200 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950 bg-transparent"
+              onClick={() => onVote(submission.id, "no")}
+            >
+              <ThumbsDown className="w-4 h-4 mr-2" />
+              No
+            </Button>
+            <Button
+              className="flex-1 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
+              onClick={() => onVote(submission.id, "yes")}
+            >
+              <ThumbsUp className="w-4 h-4 mr-2" />
+              Yes
+            </Button>
+          </div>
+        ) : (
+          <div className="text-center py-4">
+            <div className="flex items-center justify-center gap-2 text-green-600 dark:text-green-400">
+              <CheckCircle className="w-5 h-5" />
+              <span className="font-medium">Vote submitted!</span>
+            </div>
+          </div>
+        )}
+
+        {/* Navigation */}
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={onPrev} disabled={!canGoPrev} className="flex-1 bg-transparent">
+            <ChevronLeft className="w-4 h-4 mr-2" />
+            Previous
+          </Button>
+          <Button variant="outline" onClick={onNext} disabled={!canGoNext} className="flex-1 bg-transparent">
+            Next
+            <ChevronRight className="w-4 h-4 ml-2" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function MediaViewer({ file }: { file: { type: "image" | "video"; url: string; thumbnail?: string } }) {
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [isMuted, setIsMuted] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  const togglePlay = () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause()
+      } else {
+        videoRef.current.play()
+      }
+      setIsPlaying(!isPlaying)
+    }
+  }
+
+  const toggleMute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = !isMuted
+      setIsMuted(!isMuted)
+    }
+  }
+
+  return (
+    <div className="relative aspect-square rounded-lg overflow-hidden bg-muted">
+      {file.type === "image" ? (
+        <img src={file.url || "/placeholder.svg"} alt="Submission proof" className="w-full h-full object-cover" />
+      ) : (
+        <div className="relative w-full h-full">
+          <video
+            ref={videoRef}
+            src={file.url}
+            className="w-full h-full object-cover"
+            poster={file.thumbnail}
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
+            onEnded={() => setIsPlaying(false)}
+            muted={isMuted}
+          />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Button
+              variant="secondary"
+              size="icon"
+              className="w-16 h-16 rounded-full bg-black/50 hover:bg-black/70"
+              onClick={togglePlay}
+            >
+              {isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8" />}
+            </Button>
+          </div>
+          <Button
+            variant="secondary"
+            size="icon"
+            className="absolute top-3 right-3 w-8 h-8 bg-black/50 hover:bg-black/70"
+            onClick={toggleMute}
+          >
+            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Leaderboard({ submissions }: { submissions: Submission[] }) {
+  const sortedSubmissions = [...submissions].sort((a, b) => {
+    const aScore = a.votes.yes / (a.votes.yes + a.votes.no || 1)
+    const bScore = b.votes.yes / (b.votes.yes + b.votes.no || 1)
+    return bScore - aScore
+  })
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="space-y-2">
+        <h3 className="text-lg font-semibold text-balance">Current Rankings</h3>
+        <p className="text-muted-foreground text-sm">Top 10 submissions will advance to organizer selection</p>
+      </div>
+
+      <div className="space-y-3">
+        {sortedSubmissions.map((submission, index) => {
+          const totalVotes = submission.votes.yes + submission.votes.no
+          const yesPercentage = totalVotes > 0 ? (submission.votes.yes / totalVotes) * 100 : 0
+          const isTopTen = index < 10
+
+          return (
+            <Card key={submission.id} className={`${isTopTen ? "border-primary/20 bg-primary/5" : ""}`}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted font-bold text-sm">
+                    {index + 1}
+                  </div>
+                  <Avatar className="w-8 h-8">
+                    <AvatarFallback>{submission.username[0].toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{submission.username}</span>
+                      {isTopTen && (
+                        <Badge variant="secondary" className="text-xs gap-1">
+                          <Star className="w-3 h-3" />
+                          Top 10
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <ThumbsUp className="w-3 h-3 text-green-500" />
+                        <span>{submission.votes.yes}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <ThumbsDown className="w-3 h-3 text-red-500" />
+                        <span>{submission.votes.no}</span>
+                      </div>
+                      <span>{yesPercentage.toFixed(0)}% approval</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
