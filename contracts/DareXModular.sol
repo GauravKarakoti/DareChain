@@ -3,15 +3,11 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./interfaces/IPYUSD.sol";
-import "./interfaces/ISelfProtocol.sol";
 import "./libraries/DareXTypes.sol";
 import "./RewardDistribution.sol";
 import "./Voting.sol"; // <-- Import Voting instead of BettingPool
 
 contract DareXModular is ReentrancyGuard, Ownable {
-    IPYUSD public pyusdToken;
-    ISelfProtocol public selfProtocol;
     RewardDistribution public rewardDistribution;
     
     uint256 public dareCount;
@@ -28,20 +24,13 @@ contract DareXModular is ReentrancyGuard, Ownable {
     event DareCompleted(uint256 indexed dareId, address indexed winner, uint256 reward, bool success);
     event VotingContractCreated(uint256 indexed dareId, address votingContract); // <-- Renamed event
     
-    modifier onlyVerified() {
-        require(selfProtocol.verifyIdentity(msg.sender), "Identity not verified");
-        _;
-    }
-    
     modifier dareExists(uint256 dareId) {
         require(dareId > 0 && dareId <= dareCount, "Dare does not exist");
         _;
     }
     
-    constructor(address _pyusd, address _selfProtocol, address _treasury) {
-        pyusdToken = IPYUSD(_pyusd);
-        selfProtocol = ISelfProtocol(_selfProtocol);
-        rewardDistribution = new RewardDistribution(_pyusd, _treasury);
+    constructor(address _treasury) {
+        rewardDistribution = new RewardDistribution(_treasury);
         _transferOwnership(msg.sender);
     }
     
@@ -50,11 +39,9 @@ contract DareXModular is ReentrancyGuard, Ownable {
         string memory _description,
         uint256 _reward,
         uint256 _deadline
-    ) external onlyVerified nonReentrant {
+    ) external nonReentrant {
         require(_reward > 0, "Reward must be positive");
         require(_deadline > block.timestamp, "Deadline must be in future");
-        
-        require(pyusdToken.transferFrom(msg.sender, address(rewardDistribution), _reward), "PYUSD transfer failed");
         
         dareCount++;
         
@@ -75,7 +62,7 @@ contract DareXModular is ReentrancyGuard, Ownable {
         });
         
         // Create a voting contract for this dare
-        Voting votingContract = new Voting(dareCount, _deadline, address(selfProtocol), address(this));
+        Voting votingContract = new Voting(dareCount, _deadline, address(this));
         votingContracts[dareCount] = address(votingContract);
         
         totalVolume += _reward;
@@ -87,7 +74,6 @@ contract DareXModular is ReentrancyGuard, Ownable {
     function submitProof(uint256 _dareId, string memory _proofCID) 
         external 
         dareExists(_dareId) 
-        onlyVerified 
     {
         DareXTypes.Dare storage dare = dares[_dareId];
         require(block.timestamp <= dare.deadline, "Dare expired");

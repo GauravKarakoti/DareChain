@@ -12,7 +12,7 @@ import { Switch } from "./ui/switch"
 import { Alert, AlertDescription } from "./ui/alert"
 import { Plus, Trophy, Clock, Users, MapPin, Eye, AlertCircle, CheckCircle, Lock } from "lucide-react"
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
-import { darexAbi, darexContractAddress, pyusdAbi, pyusdContractAddress, rewardDistributionContractAddress } from '../lib/contracts'
+import { darexAbi, darexContractAddress, rewardDistributionContractAddress } from '../lib/contracts'
 import { parseEther } from 'viem'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 
@@ -54,9 +54,6 @@ const deadlines = [
 export function CreateDare() {
   const { isConnected } = useAccount()
 
-  const { data: approveHash, writeContract: approveTokens, error: approveError } = useWriteContract()
-  const { isLoading: isApproving, isSuccess: isApproved } = useWaitForTransactionReceipt({ hash: approveHash })
-
   const { data: createDareHash, writeContract: createDare, error: createDareError } = useWriteContract()
   const { isLoading: isCreating, isSuccess: isCreated } = useWaitForTransactionReceipt({ hash: createDareHash })
 
@@ -90,23 +87,8 @@ export function CreateDare() {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleApprove = () => {
-    console.log("Approving tokens...")
-    if (!validateForm()) return
-    approveTokens({
-      abi: pyusdAbi,
-      address: pyusdContractAddress,
-      functionName: 'approve',
-      args: [rewardDistributionContractAddress, parseEther(formData.reward)]
-    })
-  }
-
   const handleSubmit = () => {
     if (!validateForm()) return;
-    if (!isApproved) {
-        alert("Please approve the token transfer first.");
-        return
-    };
     const deadlineInSeconds = Math.floor(Date.now() / 1000) + (parseInt(formData.deadline, 10) * 24 * 60 * 60);
     createDare({
       abi: darexAbi,
@@ -128,7 +110,7 @@ export function CreateDare() {
     }
   }
 
-  const anyError = approveError || createDareError;
+  const anyError = createDareError;
 
   return (
     <div className="p-4 space-y-6">
@@ -173,10 +155,10 @@ export function CreateDare() {
                     <CardContent className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="reward">Reward (PYUSD) *</Label>
+                            <Label htmlFor="reward">Reward (ETH) *</Label>
                             <div className="relative">
                             <Trophy className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                            <Input id="reward" type="number" placeholder="5" value={formData.reward} onChange={(e) => updateFormData("reward", e.target.value)} className={`pl-10 ${errors.reward ? "border-destructive" : ""}`} min="0.1" step="0.1" />
+                            <Input id="reward" type="number" placeholder="0.1" value={formData.reward} onChange={(e) => updateFormData("reward", e.target.value)} className={`pl-10 ${errors.reward ? "border-destructive" : ""}`} min="0.001" step="0.001" />
                             </div>
                             {errors.reward && <p className="text-sm text-destructive flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.reward}</p>}
                         </div>
@@ -197,14 +179,10 @@ export function CreateDare() {
                     </CardContent>
                 </Card>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Button onClick={handleApprove} disabled={isApproving || isApproved}>
-                        <Lock className="w-4 h-4 mr-2" />
-                        {isApproving ? 'Approving...' : isApproved ? 'Tokens Approved' : '1. Approve PYUSD'}
-                    </Button>
-                    <Button onClick={handleSubmit} disabled={isCreating || !isApproved}>
+                <div className="flex justify-center">
+                    <Button onClick={handleSubmit} disabled={isCreating} size="lg">
                         <Plus className="w-4 h-4 mr-2" />
-                        {isCreating ? 'Creating Dare...' : '2. Create Dare'}
+                        {isCreating ? 'Creating Dare...' : 'Create Dare'}
                     </Button>
                 </div>
                 

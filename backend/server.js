@@ -67,6 +67,7 @@ app.get("/api/profile/activities", (req, res) => {
     ]});
 });
 
+console.log("Starting....")
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });

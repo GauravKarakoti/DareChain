@@ -3,10 +3,8 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./interfaces/IPYUSD.sol";
 
 contract RewardDistribution is ReentrancyGuard, Ownable {
-    IPYUSD public pyusdToken;
     
     uint256 public platformFeeBps = 50; // 0.5% in basis points
     address public treasury;
@@ -17,8 +15,7 @@ contract RewardDistribution is ReentrancyGuard, Ownable {
         uint256 platformFee
     );
     
-    constructor(address _pyusd, address _treasury) {
-        pyusdToken = IPYUSD(_pyusd);
+    constructor(address _treasury) {
         treasury = _treasury;
         _transferOwnership(msg.sender); // The darex contract will own this.
     }
@@ -34,14 +31,7 @@ contract RewardDistribution is ReentrancyGuard, Ownable {
         
         address receiver = _success ? _participant : _creator;
         
-        // Transfer the net reward to the winner (participant) or back to creator
-        require(pyusdToken.transfer(receiver, netReward), "Reward transfer failed");
-        
-        // Transfer the platform fee to the treasury
-        if (platformFeeAmount > 0) {
-            require(pyusdToken.transfer(treasury, platformFeeAmount), "Fee transfer failed");
-        }
-        
+        // Emit event for reward distribution (actual transfers handled externally)
         emit RewardsDistributed(receiver, netReward, platformFeeAmount);
     }
     
@@ -54,9 +44,5 @@ contract RewardDistribution is ReentrancyGuard, Ownable {
     function setTreasury(address _newTreasury) external onlyOwner {
         require(_newTreasury != address(0), "Invalid treasury");
         treasury = _newTreasury;
-    }
-
-    function emergencyWithdraw(uint256 _amount) external onlyOwner {
-        require(pyusdToken.transfer(owner(), _amount), "Withdrawal failed");
     }
 }

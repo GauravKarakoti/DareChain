@@ -2,12 +2,10 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./interfaces/ISelfProtocol.sol"; // Assuming voters also need to be verified
 
 contract Voting is Ownable {
     uint256 public immutable dareId;
     uint256 public immutable deadline;
-    ISelfProtocol public selfProtocol;
 
     uint256 public forVotes;
     uint256 public againstVotes;
@@ -21,19 +19,13 @@ contract Voting is Ownable {
         _;
     }
 
-    modifier onlyVerified() {
-        require(selfProtocol.verifyIdentity(msg.sender), "Identity not verified");
-        _;
-    }
-
-    constructor(uint256 _dareId, uint256 _deadline, address _selfProtocol, address _owner) {
+    constructor(uint256 _dareId, uint256 _deadline, address _owner) {
         dareId = _dareId;
         deadline = _deadline;
-        selfProtocol = ISelfProtocol(_selfProtocol);
         _transferOwnership(_owner); // The darex contract owns this contract
     }
 
-    function vote(bool _supports) external onlyActive onlyVerified {
+    function vote(bool _supports) external onlyActive {
         require(!hasVoted[msg.sender], "You have already voted");
 
         hasVoted[msg.sender] = true;
