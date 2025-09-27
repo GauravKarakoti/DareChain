@@ -54,7 +54,7 @@ async function main() {
   };
 
   const fs = require('fs');
-  fs.writeFileSync('deployment.json', JSON.stringify(addresses, null, 2));
+  fs.writeFileSync('config/deployment.json', JSON.stringify(addresses, null, 2));
   console.log("Deployment info saved to deployment.json");
 }
 
