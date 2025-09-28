@@ -1,6 +1,5 @@
 'use client';
 
-import { auth } from '@/auth';
 import { ClaimReward } from '@/components/ClaimReward';
 import { CreateDare } from '@/components/CreateDare';
 import { DareList } from '@/components/DareList';
@@ -81,7 +80,7 @@ export default function Home() {
           {tabs.map((tab) => (
             <Button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id as 'explore' | 'create' | 'manage' | 'rewards')}
               variant={activeTab === tab.id ? 'primary' : 'secondary'}
               size="sm"
               className={`flex items-center gap-1 ${

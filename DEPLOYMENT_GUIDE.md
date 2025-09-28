@@ -48,7 +48,7 @@ After deployment, copy the contract address from the output and update the follo
 ### Environment Variables
 Create `.env.local` file:
 ```env
-NEXT_PUBLIC_WLD_CLIENT_ID=your_world_app_id
+NEXT_PUBLIC_APP_ID=your_world_app_id
 WLD_CLIENT_ID=your_world_app_id
 WLD_CLIENT_SECRET=your_world_app_secret
 NEXTAUTH_SECRET=your_nextauth_secret
@@ -82,7 +82,7 @@ const DAREFI_CONTRACT_ADDRESS = 'YOUR_DEPLOYED_CONTRACT_ADDRESS';
 ### Update Environment Variables
 Update the client app ID in components:
 ```typescript
-app_id: process.env.NEXT_PUBLIC_WLD_CLIENT_ID as `app_${string}`,
+app_id: process.env.NEXT_PUBLIC_APP_ID as `app_${string}`,
 ```
 
 ## 4. Testing the Application

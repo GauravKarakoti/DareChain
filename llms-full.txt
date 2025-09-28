@@ -8547,7 +8547,7 @@ Open `index.js` and complete the following sections:
 ```javascript
 import { createWalletClient, http, formatEther, createPublicClient } from 'viem';
 import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts';
-import { worldchainSepolia } from 'viem/chains';
+import { worldchain } from 'viem/chains';
 import { input } from '@inquirer/prompts';
 import fs from 'fs';
 import path from 'path';

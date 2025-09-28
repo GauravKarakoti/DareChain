@@ -1,15 +1,15 @@
 'use client';
 
 import DareFiCoreABI from '@/abi/DareFiCore.json';
-import { Button, LiveFeedback, Input, TextArea } from '@worldcoin/mini-apps-ui-kit-react';
+import { Button, Input, LiveFeedback, TextArea } from '@worldcoin/mini-apps-ui-kit-react';
 import { MiniKit, VerificationLevel } from '@worldcoin/minikit-js';
 import { useWaitForTransactionReceipt } from '@worldcoin/minikit-react';
 import { useEffect, useState } from 'react';
-import { createPublicClient, http } from 'viem';
-import { worldchainSepolia } from 'viem/chains';
+import { createPublicClient, http, parseEther } from 'viem';
+import { worldchain } from 'viem/chains';
 
 // Replace with your deployed contract address
-const DAREFI_CONTRACT_ADDRESS = '0x...'; // TODO: Update after deployment
+const DAREFI_CONTRACT_ADDRESS = '0x119F1C92DB209Be928aaD48185CC997B9E442261'; // TODO: Update after deployment
 
 export const CreateDare = () => {
   const [title, setTitle] = useState('');
@@ -17,17 +17,15 @@ export const CreateDare = () => {
   const [reward, setReward] = useState('');
   const [deadline, setDeadline] = useState('');
   const [isVerified, setIsVerified] = useState(false);
-  
-  const [buttonState, setButtonState] = useState<
-    'pending' | 'success' | 'failed' | undefined
-  >(undefined);
-  
+
+  const [buttonState, setButtonState] = useState<'pending' | 'success' | 'failed' | undefined>(undefined);
+
   const [transactionId, setTransactionId] = useState<string>('');
-  
+
   // Create a public client for World Chain Sepolia
   const client = createPublicClient({
-    chain: worldchainSepolia,
-    transport: http('https://worldchain-sepolia.g.alchemy.com/public'),
+    chain: worldchain,
+    transport: http('https://worldchain-mainnet.g.alchemy.com/public'),
   });
 
   const {
@@ -38,7 +36,7 @@ export const CreateDare = () => {
   } = useWaitForTransactionReceipt({
     client: client,
     appConfig: {
-      app_id: process.env.NEXT_PUBLIC_WLD_CLIENT_ID as `app_${string}`,
+      app_id: process.env.NEXT_PUBLIC_APP_ID as `app_${string}`,
     },
     transactionId: transactionId,
   });
@@ -99,14 +97,14 @@ export const CreateDare = () => {
       alert('Please verify with World ID first');
       return;
     }
-    
+
     if (!title || !description || !reward || !deadline) {
       alert('Please fill in all fields');
       return;
     }
 
     const deadlineTimestamp = Math.floor(new Date(deadline).getTime() / 1000);
-    const rewardWei = (parseFloat(reward) * 10 ** 18).toString();
+    const rewardWei = parseEther(reward);
 
     setButtonState('pending');
     setTransactionId('');
@@ -119,7 +117,7 @@ export const CreateDare = () => {
             abi: DareFiCoreABI,
             functionName: 'createDare',
             args: [title, description, deadlineTimestamp],
-            value: rewardWei,
+            value: `0x${rewardWei.toString(16)}`,
           },
         ],
       });
@@ -142,18 +140,11 @@ export const CreateDare = () => {
   return (
     <div className="grid w-full gap-4">
       <p className="text-lg font-semibold">Create a Dare</p>
-      
+
       {!isVerified && (
         <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-          <p className="text-sm text-yellow-800 mb-2">
-            You must verify with World ID to create dares
-          </p>
-          <Button
-            onClick={onVerify}
-            size="sm"
-            variant="secondary"
-            className="w-full"
-          >
+          <p className="text-sm text-yellow-800 mb-2">You must verify with World ID to create dares</p>
+          <Button onClick={onVerify} size="sm" variant="secondary" className="w-full">
             Verify with World ID
           </Button>
         </div>
@@ -161,32 +152,21 @@ export const CreateDare = () => {
 
       {isVerified && (
         <>
-          <Input
-            label="Dare Title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g., Do 100 pushups"
-            required
-          />
-          
+          <Input label="Dare Title" value={title} onChange={(e) => setTitle(e.target.value)} required />
           <TextArea
             label="Description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe what needs to be done..."
             required
           />
-          
           <Input
             label="Reward (ETH)"
             type="number"
             step="0.001"
             value={reward}
             onChange={(e) => setReward(e.target.value)}
-            placeholder="0.01"
             required
           />
-          
           <Input
             label="Deadline"
             type="datetime-local"

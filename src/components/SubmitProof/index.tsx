@@ -6,10 +6,10 @@ import { MiniKit, VerificationLevel } from '@worldcoin/minikit-js';
 import { useWaitForTransactionReceipt } from '@worldcoin/minikit-react';
 import { useEffect, useState } from 'react';
 import { createPublicClient, http } from 'viem';
-import { worldchainSepolia } from 'viem/chains';
+import { worldchain } from 'viem/chains';
 
 // Replace with your deployed contract address
-const DAREFI_CONTRACT_ADDRESS = '0x...'; // TODO: Update after deployment
+const DAREFI_CONTRACT_ADDRESS = '0x119F1C92DB209Be928aaD48185CC997B9E442261'; // TODO: Update after deployment
 
 interface Dare {
   id: number;
@@ -40,8 +40,8 @@ export const SubmitProof = ({ dare, onClose, onSuccess }: SubmitProofProps) => {
   const [transactionId, setTransactionId] = useState<string>('');
   
   const client = createPublicClient({
-    chain: worldchainSepolia,
-    transport: http('https://worldchain-sepolia.g.alchemy.com/public'),
+    chain: worldchain,
+    transport: http('https://worldchain-mainnet.g.alchemy.com/public'),
   });
 
   const {
@@ -52,7 +52,7 @@ export const SubmitProof = ({ dare, onClose, onSuccess }: SubmitProofProps) => {
   } = useWaitForTransactionReceipt({
     client: client,
     appConfig: {
-      app_id: process.env.NEXT_PUBLIC_WLD_CLIENT_ID as `app_${string}`,
+      app_id: process.env.NEXT_PUBLIC_APP_ID as `app_${string}`,
     },
     transactionId: transactionId,
   });

@@ -4,10 +4,10 @@ import DareFiCoreABI from '@/abi/DareFiCore.json';
 import { Button } from '@worldcoin/mini-apps-ui-kit-react';
 import { useEffect, useState } from 'react';
 import { createPublicClient, http } from 'viem';
-import { worldchainSepolia } from 'viem/chains';
+import { worldchain } from 'viem/chains';
 
 // Replace with your deployed contract address
-const DAREFI_CONTRACT_ADDRESS = '0x...'; // TODO: Update after deployment
+const DAREFI_CONTRACT_ADDRESS = '0x119F1C92DB209Be928aaD48185CC997B9E442261'; // TODO: Update after deployment
 
 interface Dare {
   id: number;
@@ -26,14 +26,10 @@ export const DareList = ({ onSelectDare }: { onSelectDare?: (dare: Dare) => void
   const [loading, setLoading] = useState(true);
   
   const client = createPublicClient({
-    chain: worldchainSepolia,
-    transport: http('https://worldchain-sepolia.g.alchemy.com/public'),
+    chain: worldchain,
+    transport: http('https://worldchain-mainnet.g.alchemy.com/public'),
   });
-
-  useEffect(() => {
-    fetchDares();
-  }, []);
-
+  
   const fetchDares = async () => {
     try {
       setLoading(true);
@@ -85,6 +81,10 @@ export const DareList = ({ onSelectDare }: { onSelectDare?: (dare: Dare) => void
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchDares();
+  }, [fetchDares]);
 
   const formatTimeLeft = (deadline: number) => {
     const now = Math.floor(Date.now() / 1000);
