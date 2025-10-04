@@ -18,12 +18,12 @@ library DareXTypes {
         uint256 forVotes;      // Votes for success
         uint256 againstVotes;  // Votes for failure
         uint256 participantCount;
+        bool winnerSelected;
     }
     
     struct Submission {
         address participant;
         string proofCID;
         uint256 submittedAt;
-        bool exists;
     }
 }

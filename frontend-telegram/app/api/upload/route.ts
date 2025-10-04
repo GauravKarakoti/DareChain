@@ -16,29 +16,40 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No files were uploaded.' }, { status: 400 });
     }
 
-    // The Lighthouse SDK needs a path for the upload. Since we are in a serverless
-    // environment, we will convert the files to buffers.
-    const fileObjects = await Promise.all(
+    // 1. Upload each file individually to get their CIDs
+    const uploadResponses = await Promise.all(
       files.map(async (file) => {
         const buffer = await file.arrayBuffer();
+        const response = await lighthouse.uploadBuffer(Buffer.from(buffer), apiKey);
         return {
-          path: file.name,
-          content: Buffer.from(buffer),
+          name: file.name,
+          cid: response.data.Hash,
+          size: response.data.Size,
         };
       })
     );
 
-    // Upload the files to Lighthouse
-    const response = await lighthouse.upload(fileObjects, apiKey);
+    // 2. Create a JSON manifest of the uploaded files
+    const manifest = {
+      name: 'DareX Proof Submission',
+      description: `Submission containing ${files.length} files.`,
+      files: uploadResponses,
+      timestamp: new Date().toISOString(),
+    };
 
-    // The CID is located in response.data.Hash
-    const cid = response.data.Hash;
+    const manifestBuffer = Buffer.from(JSON.stringify(manifest));
 
-    if (!cid) {
-      throw new Error('Upload failed, CID not returned.');
+    // 3. Upload the manifest JSON to get a single root CID
+    const manifestUploadResponse = await lighthouse.uploadBuffer(manifestBuffer, apiKey);
+    const rootCid = manifestUploadResponse.data.Hash;
+
+    if (!rootCid) {
+      throw new Error('Upload failed, root CID not returned.');
     }
 
-    return NextResponse.json({ cid: cid });
+    // 4. Return the single root CID
+    return NextResponse.json({ cid: rootCid });
+
   } catch (error) {
     console.error('Error uploading to Lighthouse:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';

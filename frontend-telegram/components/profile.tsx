@@ -1,11 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import axios from "axios"
+import { useAccount } from "wagmi"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import {
@@ -22,6 +24,8 @@ import {
   Vote,
   Settings,
   Share,
+  Camera,
+  Loader2,
 } from "lucide-react"
 
 interface UserStats {
@@ -33,6 +37,9 @@ interface UserStats {
   longestStreak: number
   rank: number
   totalUsers: number
+  avatar?: string
+  displayName: string
+  bio?: string
 }
 
 interface Achievement {
@@ -62,27 +69,99 @@ export function Profile() {
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [activities, setActivities] = useState<Activity[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [shareText, setShareText] = useState("Share Profile");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { address } = useAccount()
+  const router = useRouter()
+
+  const fetchProfileData = async () => {
+    if (!address) return;
+    setIsLoading(true);
+    try {
+      const [statsRes, achievementsRes, activitiesRes] = await Promise.all([
+        axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/profile/${address}`),
+        axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/profile/achievements`, {
+          params: { walletAddress: address },
+        }),
+        axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/profile/activities`, {
+          params: { walletAddress: address },
+        }),
+      ]);
+      setUserStats(statsRes.data.data);
+      setAchievements(achievementsRes.data.data);
+      setActivities(activitiesRes.data.data);
+    } catch (error) {
+      console.error("Failed to fetch profile data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchProfileData = async () => {
-      setIsLoading(true)
-      try {
-        const [statsRes, achievementsRes, activitiesRes] = await Promise.all([
-          axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/profile/stats`),
-          axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/profile/achievements`),
-          axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/profile/activities`),
-        ])
-        setUserStats(statsRes.data.data)
-        setAchievements(achievementsRes.data.data)
-        setActivities(activitiesRes.data.data)
-      } catch (error) {
-        console.error("Failed to fetch profile data:", error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
     fetchProfileData()
-  }, [])
+  }, [address])
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await axios.post('/api/upload-single', formData, {
+        onUploadProgress: (progressEvent) => {
+          const total = progressEvent.total ?? file.size;
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / total);
+          setUploadProgress(percentCompleted);
+        },
+      });
+      const { cid } = response.data;
+      await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/profile/avatar`, {
+        walletAddress: address,
+        avatarCid: cid,
+      });
+      await fetchProfileData(); // Refetch profile data to show the new avatar
+    } catch (error) {
+      console.error("Error uploading profile picture:", error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+  
+  const handleShareProfile = async () => {
+    const profileUrl = window.location.href;
+    const shareData = {
+        title: "Check out my DareX Profile!",
+        text: `See my stats and achievements for wallet ${address?.slice(0, 6)}...${address?.slice(-4)} on DareX.`,
+        url: profileUrl,
+    };
+
+    if (navigator.share) {
+        try {
+            await navigator.share(shareData);
+        } catch (error) {
+            console.error("Error sharing profile:", error);
+        }
+    } else {
+        // Fallback for browsers that don't support Web Share API
+        try {
+            await navigator.clipboard.writeText(profileUrl);
+            setShareText("Copied!");
+            setTimeout(() => {
+                setShareText("Share Profile");
+            }, 2000);
+        } catch (error) {
+            console.error("Failed to copy profile URL:", error);
+            alert("Failed to copy URL.");
+        }
+    }
+  };
 
   if (isLoading) {
     return <div>Loading profile...</div>
@@ -97,11 +176,37 @@ export function Profile() {
       {/* Profile Header */}
       <div className="p-4 space-y-6">
         <div className="text-center space-y-4">
-          <Avatar className="w-24 h-24 mx-auto">
-            <AvatarFallback className="text-3xl">U</AvatarFallback>
-          </Avatar>
+          <div className="relative w-24 h-24 mx-auto group">
+            <Avatar className="w-24 h-24">
+              {userStats.avatar && <AvatarImage src={`https://gateway.lighthouse.storage/ipfs/${userStats.avatar}`} alt="User Avatar" />}
+              <AvatarFallback className="text-3xl">
+                {address?.substring(2, 4).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <Button
+              variant="outline"
+              size="icon"
+              className="absolute bottom-0 right-0 rounded-full w-8 h-8 group-hover:bg-primary group-hover:text-primary-foreground"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+            >
+              {isUploading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Camera className="w-4 h-4" />
+              )}
+            </Button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              className="hidden"
+              accept="image/*"
+            />
+          </div>
           <div className="space-y-2">
-            <h2 className="text-2xl font-bold">Your Profile</h2>
+            <h2 className="text-2xl font-bold">{userStats.displayName ? userStats.displayName : `${address?.slice(0, 6)}...${address?.slice(-4)}`}</h2>
+            {userStats.bio && <p className="text-sm text-muted-foreground">{userStats.bio}</p>}
             <div className="flex items-center justify-center gap-2 flex-wrap">
               <Badge variant="secondary" className="gap-1">
                 <Shield className="w-3 h-3" />
@@ -123,7 +228,7 @@ export function Profile() {
           </Card>
           <Card className="text-center p-4">
             <div className="text-2xl font-bold text-secondary">{userStats.totalEarned}</div>
-            <div className="text-sm text-muted-foreground">USDC Earned</div>
+            <div className="text-sm text-muted-foreground">TFIL Earned</div>
           </Card>
           <Card className="text-center p-4">
             <div className="text-2xl font-bold text-accent">{userStats.daresCreated}</div>
@@ -133,13 +238,21 @@ export function Profile() {
 
         {/* Action Buttons */}
         <div className="flex gap-3">
-          <Button variant="outline" className="flex-1 bg-transparent">
+          <Button 
+            variant="outline" 
+            className="flex-1 bg-transparent"
+            onClick={() => router.push('/settings')}
+          >
             <Settings className="w-4 h-4 mr-2" />
             Settings
           </Button>
-          <Button variant="outline" className="flex-1 bg-transparent">
+          <Button 
+            variant="outline" 
+            className="flex-1 bg-transparent"
+            onClick={handleShareProfile}
+          >
             <Share className="w-4 h-4 mr-2" />
-            Share Profile
+            {shareText}
           </Button>
         </div>
       </div>
@@ -152,7 +265,7 @@ export function Profile() {
         </TabsList>
 
         <TabsContent value="overview" className="mt-4">
-          <ProfileOverview stats={userStats} />
+          <ProfileOverview stats={userStats} activities={activities} />
         </TabsContent>
 
         <TabsContent value="achievements" className="mt-4">
@@ -167,8 +280,21 @@ export function Profile() {
   )
 }
 
-function ProfileOverview({ stats }: { stats: UserStats }) {
-  const rankPercentile = Math.round(((stats.totalUsers - stats.rank) / stats.totalUsers) * 100)
+function ProfileOverview({ stats, activities }: { stats: UserStats, activities: Activity[] }) {
+  const rankPercentile = stats.totalUsers > 0 ? Math.round(((stats.totalUsers - stats.rank) / stats.totalUsers) * 100) : 0;
+  const recentActivities = activities.slice(0, 2);
+
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case "completed":
+      case "won":
+        return <Trophy className="w-5 h-5 text-green-600 dark:text-green-400" />;
+      case "created":
+        return <Star className="w-5 h-5 text-blue-600 dark:text-blue-400" />;
+      default:
+        return <CheckCircle className="w-5 h-5 text-gray-600 dark:text-gray-400" />;
+    }
+  };
 
   return (
     <div className="p-4 space-y-6">
@@ -220,9 +346,11 @@ function ProfileOverview({ stats }: { stats: UserStats }) {
               <span>Current: {stats.currentStreak} dares</span>
               <span>Best: {stats.longestStreak} dares</span>
             </div>
-            <Progress value={(stats.currentStreak / stats.longestStreak) * 100} className="w-full" />
+            <Progress value={stats.longestStreak > 0 ? (stats.currentStreak / stats.longestStreak) * 100 : 0} className="w-full" />
             <div className="text-xs text-muted-foreground text-center">
-              {stats.longestStreak - stats.currentStreak} more to beat your record!
+              {stats.longestStreak > stats.currentStreak
+                ? `${stats.longestStreak - stats.currentStreak} more to beat your record!`
+                : "New record!"}
             </div>
           </CardContent>
         </Card>
@@ -232,28 +360,22 @@ function ProfileOverview({ stats }: { stats: UserStats }) {
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-balance">Recent Highlights</h3>
         <div className="space-y-3">
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
-                <Trophy className="w-5 h-5 text-green-600 dark:text-green-400" />
+          {recentActivities.map(activity => (
+            <Card key={activity.id} className="p-4">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 bg-${activity.type === 'won' || activity.type === 'completed' ? 'green' : 'blue'}-100 dark:bg-${activity.type === 'won' || activity.type === 'completed' ? 'green' : 'blue'}-900 rounded-full flex items-center justify-center`}>
+                  {getActivityIcon(activity.type)}
+                </div>
+                <div className="flex-1">
+                  <div className="font-medium">{activity.title}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {activity.description}
+                    {activity.reward ? ` • Earned ${activity.reward} TFIL` : ''} • {new Date(activity.timestamp).toLocaleDateString()}
+                  </div>
+                </div>
               </div>
-              <div className="flex-1">
-                <div className="font-medium">Won Dance Challenge</div>
-                <div className="text-sm text-muted-foreground">Earned 5 USDC • 2 hours ago</div>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                <Star className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div className="flex-1">
-                <div className="font-medium">Achievement Unlocked</div>
-                <div className="text-sm text-muted-foreground">"On Fire" - 5 dare streak • 1 week ago</div>
-              </div>
-            </div>
-          </Card>
+            </Card>
+          ))}
         </div>
       </div>
     </div>
@@ -370,14 +492,14 @@ function ActivityHistory({ activities }: { activities: Activity[] }) {
                       <p className="text-sm text-muted-foreground">{activity.description}</p>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Calendar className="w-3 h-3" />
-                        <span>{activity.timestamp}</span>
+                        <span>{new Date(activity.timestamp).toLocaleString()}</span>
                       </div>
                     </div>
                     <div className="text-right space-y-1">
                       {getStatusBadge(activity.status)}
                       {activity.reward && activity.reward > 0 && (
                         <div className="text-sm font-medium text-green-600 dark:text-green-400">
-                          +{activity.reward} USDC
+                          +{activity.reward} TFIL
                         </div>
                       )}
                     </div>

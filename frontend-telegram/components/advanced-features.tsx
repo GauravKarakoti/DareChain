@@ -87,7 +87,7 @@ export function WeeklyChallenges() {
                     <p className="text-sm text-muted-foreground text-pretty">{challenge.description}</p>
                   </div>
                   <Badge variant="outline" className="ml-2">
-                    {challenge.reward} USDC
+                    {challenge.reward} TFIL
                   </Badge>
                 </div>
 
@@ -279,7 +279,7 @@ export function DailyRewards() {
             >
               <div className="text-xs font-medium">Day {reward.day}</div>
               <div className="text-sm font-bold">{reward.reward}</div>
-              <div className="text-xs text-muted-foreground">USDC</div>
+              <div className="text-xs text-muted-foreground">TFIL</div>
               {reward.claimed && (
                 <div className="mt-1">
                   <Badge className="bg-green-600 text-white p-0.5">✓</Badge>
@@ -292,7 +292,7 @@ export function DailyRewards() {
         {!todayClaimed && currentStreak < 7 && (
           <Button onClick={handleClaimReward} className="w-full transition-all duration-200 hover:scale-105">
             <Gift className="w-4 h-4 mr-2" />
-            Claim Today's Reward ({rewards[currentStreak]?.reward} USDC)
+            Claim Today's Reward ({rewards[currentStreak]?.reward} TFIL)
           </Button>
         )}
       </CardContent>

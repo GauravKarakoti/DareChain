@@ -161,7 +161,7 @@ export function VotingSystem({ dareId }: { dareId?: number }) {
               </div>
               <Badge variant="secondary" className="gap-1">
                 <Trophy className="w-3 h-3" />
-                {dare.reward} USDC
+                {dare.reward} TFIL
               </Badge>
             </div>
           </CardHeader>

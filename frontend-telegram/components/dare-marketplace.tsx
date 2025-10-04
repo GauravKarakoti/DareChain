@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import axios from "axios"
+import { useAccount } from "wagmi"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -28,6 +29,7 @@ import { VotingSystem } from "./voting-system"
 import { DareChat } from "./dare-chat"
 import { useHapticFeedback, DareCardSkeleton } from "./enhanced-mobile-features"
 
+// --- UPDATED DARE INTERFACE ---
 interface Dare {
   id: number
   title: string
@@ -37,12 +39,14 @@ interface Dare {
   deadline: string
   difficulty: "Easy" | "Medium" | "Hard"
   participants: number
-  status: "active" | "voting" | "completed"
+  status: "open" | "voting" | "completed"
   category: string
   location?: string
   featured?: boolean
   likes?: number
   comments?: number
+  isAcceptedByUser?: boolean
+  isLikedByUser?: boolean
 }
 
 export function DareMarketplace() {
@@ -50,18 +54,23 @@ export function DareMarketplace() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedDifficulty, setSelectedDifficulty] = useState("all")
-  const [isLoading, setIsLoading] = useState(true) // Set initial loading to true
+  const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState(new Date())
+  const { address, isConnected } = useAccount() // Get user's wallet address
 
   const categories = ["all", "Performance", "Learning", "Social Good", "Creative", "Adventure"]
   const difficulties = ["all", "Easy", "Medium", "Hard"]
 
-  const fetchDares = async () => {
-    // Don't set loading to true on refresh, use isRefreshing instead
+  // --- MODIFIED fetchDares to send walletAddress ---
+  const fetchDares = useCallback(async () => {
     if (!isRefreshing) setIsLoading(true)
     try {
-      const response = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/dares`)
+      const baseUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/dares`
+      const url = isConnected && address ? `${baseUrl}?walletAddress=${address}` : baseUrl
+      const response = await axios.get(url)
+      
+      console.log("Fetched dares:", response.data)
       setDares(response.data.data)
       setLastUpdated(new Date())
     } catch (error) {
@@ -69,15 +78,16 @@ export function DareMarketplace() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [address, isConnected, isRefreshing])
 
+  // --- MODIFIED useEffect to refetch on connection change ---
   useEffect(() => {
     fetchDares()
     const interval = setInterval(() => {
       setLastUpdated(new Date())
     }, 30000)
     return () => clearInterval(interval)
-  }, [])
+  }, [fetchDares]) // Now depends on fetchDares, which depends on wallet address
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
@@ -89,14 +99,21 @@ export function DareMarketplace() {
     const matchesSearch =
       dare.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       dare.description.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCategory = selectedCategory === "all" || dare.category === selectedCategory
-    const matchesDifficulty = selectedDifficulty === "all" || dare.difficulty === selectedDifficulty
+    
+    // 👇 CORRECTED LINE: Make the category check case-insensitive
+    const matchesCategory = 
+      selectedCategory === "all" || 
+      dare.category?.toLowerCase() === selectedCategory.toLowerCase()
+
+    const matchesDifficulty = 
+      selectedDifficulty === "all" || 
+      dare.difficulty?.toLowerCase() === selectedDifficulty.toLowerCase()
 
     return matchesSearch && matchesCategory && matchesDifficulty
   })
 
   const featuredDares = filteredDares.filter((dare) => dare.featured)
-  const activeDares = filteredDares.filter((dare) => dare.status === "active" && !dare.featured)
+  const activeDares = filteredDares.filter((dare) => dare.status === "open" && !dare.featured)
   const votingDares = filteredDares.filter((dare) => dare.status === "voting")
 
   return (
@@ -235,11 +252,12 @@ function DareCard({ dare, index }: { dare: Dare; index: number }) {
   const [showVoting, setShowVoting] = useState(false)
   const [showChat, setShowChat] = useState(false)
   const [isAccepting, setIsAccepting] = useState(false)
-  const [isAccepted, setIsAccepted] = useState(false)
-  const [isLiked, setIsLiked] = useState(false)
+  const [isAccepted, setIsAccepted] = useState(dare.isAcceptedByUser || false)
+  const [isLiked, setIsLiked] = useState(dare.isLikedByUser || false)
   const [likeCount, setLikeCount] = useState(dare.likes || 0)
   const [commentCount, setCommentCount] = useState(dare.comments || 0)
   const { vibrate } = useHapticFeedback()
+  const { address } = useAccount()
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -255,9 +273,15 @@ function DareCard({ dare, index }: { dare: Dare; index: number }) {
   }
 
   const handleAcceptDare = async () => {
+    if (!address) {
+      console.error("Cannot accept dare, wallet not connected.");
+      return;
+    }
     setIsAccepting(true)
     try {
-      await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/dares/${dare.id}/accept`)
+      await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/dares/${dare.id}/accept`, {
+        walletAddress: address
+      })
       setIsAccepted(true)
     } catch (error) {
       console.error("Failed to accept dare:", error)
@@ -266,13 +290,25 @@ function DareCard({ dare, index }: { dare: Dare; index: number }) {
     }
   }
 
-  const handleLike = () => {
-    setIsLiked(!isLiked)
-    setLikeCount((prev) => (isLiked ? prev - 1 : prev + 1))
-    vibrate(25)
-    // In a real app, you would also make an API call here to update the like status
-    // axios.post(`http://localhost:3001/api/dares/${dare.id}/like`);
-  }
+  const handleLike = async () => {
+    if (!address) {
+      console.error("Cannot like dare, wallet not connected.");
+      return;
+    }
+    vibrate(25);
+    const originalIsLiked = isLiked;
+    setIsLiked(!isLiked);
+    setLikeCount((prev) => (isLiked ? prev - 1 : prev + 1));
+    try {
+        await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/dares/${dare.id}/like`, {
+            walletAddress: address
+        });
+    } catch (error) {
+        console.error("Failed to update like status:", error);
+        setIsLiked(originalIsLiked);
+        setLikeCount((prev) => (originalIsLiked ? prev - 1 : prev + 1));
+    }
+  };
 
   const handleShare = async () => {
     vibrate(50)
@@ -281,13 +317,13 @@ function DareCard({ dare, index }: { dare: Dare; index: number }) {
         await navigator.share({
           title: dare.title,
           text: dare.description,
-          url: `https://darex.app/dare/${dare.id}`,
+          url: `https://dare-x.vercel.app/`,
         })
       } catch (err) {
         console.log("Error sharing:", err)
       }
     } else {
-      navigator.clipboard.writeText(`Check out this dare: ${dare.title} - https://darex.app/dare/${dare.id}`)
+      navigator.clipboard.writeText(`Check out this dare: ${dare.title} - https://dare-x.vercel.app/`)
     }
   }
 
@@ -354,7 +390,7 @@ function DareCard({ dare, index }: { dare: Dare; index: number }) {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1">
               <Trophy className="w-4 h-4 text-secondary" />
-              <span className="font-medium">{dare.reward} USDC</span>
+              <span className="font-medium">{dare.reward} TFIL</span>
             </div>
             <div className="flex items-center gap-1">
               <Clock className="w-4 h-4 text-muted-foreground" />

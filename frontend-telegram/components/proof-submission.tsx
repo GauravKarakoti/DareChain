@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -23,9 +23,10 @@ import {
   Clock,
   Trophy,
 } from "lucide-react"
-import { useWriteContract, useWaitForTransactionReceipt } from "wagmi"
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi"
 import { darexAbi, darexContractAddress } from "@/lib/contracts"
 import axios from "axios"
+import { useRouter } from "next/navigation"
 
 interface ProofFile {
   id: string
@@ -44,19 +45,9 @@ interface DareDetails {
   requirements: string[]
 }
 
-const mockDare: DareDetails = {
-  id: 1,
-  title: "Dance for 30 seconds in public",
-  description:
-    "Show off your moves in a busy public space and record it! Extra points for creativity and crowd reaction.",
-  reward: 5,
-  deadline: "2 days",
-  requirements: [
-    "Must be in a public space with people around",
-    "Dance for at least 30 seconds",
-    "Show your face clearly in the video",
-    "Include audio of the music or environment",
-  ],
+interface UserSubmission {
+    description: string;
+    fileCID: string;
 }
 
 export function ProofSubmission({ dareId }: { dareId?: number }) {
@@ -67,9 +58,75 @@ export function ProofSubmission({ dareId }: { dareId?: number }) {
   const [fileCID, setFileCID] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
+  const { address } = useAccount()
+  const [dare, setDare] = useState<DareDetails | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [hasAlreadySubmitted, setHasAlreadySubmitted] = useState(false);
+  const [userSubmission, setUserSubmission] = useState<UserSubmission | null>(null);
 
-  const { data: submitProofHash, writeContract: submitProof, error: submitProofError } = useWriteContract()
+  const { data: submitProofHash, writeContract: submitProof, error: submitProofError, isError } = useWriteContract()
   const { isLoading: isSubmitting, isSuccess: isSubmittedSuccess } = useWaitForTransactionReceipt({ hash: submitProofHash })
+
+  const { data: hasSubmittedData, isLoading: isLoadingSubmissionStatus } = useReadContract({
+    abi: darexAbi,
+    address: darexContractAddress as `0x${string}`,
+    functionName: 'hasSubmitted',
+    args: [dareId ? BigInt(dareId) : 0, address],
+    query: {
+        enabled: !!dareId && !!address,
+    }
+  });
+
+  useEffect(() => {
+    if(hasSubmittedData) {
+        setHasAlreadySubmitted(true);
+    }
+  }, [hasSubmittedData])
+
+  useEffect(() => {
+    if (hasAlreadySubmitted && dareId && address) {
+        const fetchUserSubmission = async () => {
+            // This is a hypothetical endpoint. You will need to implement this on your backend.
+            // It should fetch the submission details for a specific user and dare.
+            try {
+                const response = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/submission`, {
+                    params: {
+                        dareId,
+                        walletAddress: address
+                    }
+                });
+                console.log("Fetched user submission:", response.data);
+                setUserSubmission(response.data.data);
+            } catch (error) {
+                console.error("Failed to fetch user submission details:", error);
+                // Set an empty object or handle error to prevent infinite loading
+                setUserSubmission({ description: "Could not load your submission description.", fileCID: "N/A" });
+            }
+        };
+        fetchUserSubmission();
+    }
+  }, [hasAlreadySubmitted, dareId, address]);
+
+
+  useEffect(() => {
+    if (dareId) {
+      const fetchDareDetails = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+          const response = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/dares/${dareId}`);
+          setDare(response.data.data);
+        } catch (error) {
+          console.error(`Failed to fetch dare details for dare ${dareId}:`, error);
+          setError("Failed to load dare details.");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchDareDetails();
+    }
+  }, [dareId]);
 
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>, type: "image" | "video") => {
@@ -170,14 +227,64 @@ export function ProofSubmission({ dareId }: { dareId?: number }) {
     }
     submitProof({
       abi: darexAbi,
-      address: darexContractAddress,
+      address: darexContractAddress as `0x${string}`,
       functionName: 'submitProof',
       args: [BigInt(dareId), fileCID],
     })
   }
+
+  useEffect(() => {
+    if (isSubmittedSuccess && fileCID && dareId && address) {
+      const saveSubmissionToDb = async () => {
+        try {
+          await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/submissions`, {
+            dareId,
+            walletAddress: address,
+            description,
+            fileCID,
+          });
+          console.log('Submission saved to database');
+        } catch (error) {
+          console.error("Failed to save submission to database:", error);
+        }
+      };
+      saveSubmissionToDb();
+    }
+  }, [isSubmittedSuccess, fileCID, dareId, address, description]);
+
+  if (isLoading || isLoadingSubmissionStatus) {
+    return <div>Loading dare details...</div>;
+  }
   
+  if (hasAlreadySubmitted) {
+    if (dare && userSubmission) {
+        console.log("User submission data:", userSubmission);
+        return <AlreadySubmitted dare={dare} submission={userSubmission} />;
+    }
+    // Show a loading state while submission data is being fetched
+    return (
+        <div className="p-4 space-y-6">
+            <Alert variant="default">
+                <Check className="h-4 w-4" />
+                <AlertDescription>
+                    You have already submitted proof for this dare. Loading your submission...
+                </AlertDescription>
+            </Alert>
+        </div>
+    )
+  }
+
+  if (error) {
+    return <div className="p-4 text-red-500">{error}</div>;
+  }
+
+  if (!dare) {
+    return <div className="p-4">Dare not found.</div>;
+  }
+
+
   if (isSubmittedSuccess) {
-    return <SubmissionSuccess dare={mockDare} />
+    return <SubmissionSuccess dare={dare} submission={userSubmission as UserSubmission} />
   }
 
   return (
@@ -191,12 +298,12 @@ export function ProofSubmission({ dareId }: { dareId?: number }) {
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1 flex-1">
-              <CardTitle className="text-lg leading-tight text-balance">{mockDare.title}</CardTitle>
-              <CardDescription className="text-pretty leading-relaxed">{mockDare.description}</CardDescription>
+              <CardTitle className="text-lg leading-tight text-balance">{dare.title}</CardTitle>
+              <CardDescription className="text-pretty leading-relaxed">{dare.description}</CardDescription>
             </div>
             <Badge variant="secondary" className="gap-1">
               <Trophy className="w-3 h-3" />
-              {mockDare.reward} USDC
+              {dare.reward} TFIL
             </Badge>
           </div>
         </CardHeader>
@@ -204,12 +311,12 @@ export function ProofSubmission({ dareId }: { dareId?: number }) {
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Clock className="w-4 h-4" />
-              <span>Deadline: {mockDare.deadline}</span>
+              <span>Deadline: {dare.deadline}</span>
             </div>
             <div className="space-y-2">
               <Label className="text-sm font-medium">Requirements:</Label>
               <ul className="space-y-1 text-sm text-muted-foreground">
-                {mockDare.requirements.map((req, index) => (
+                {dare.requirements?.map((req, index) => (
                   <li key={index} className="flex items-start gap-2">
                     <Check className="w-3 h-3 mt-0.5 text-green-500 flex-shrink-0" />
                     <span>{req}</span>
@@ -268,11 +375,22 @@ export function ProofSubmission({ dareId }: { dareId?: number }) {
           </Button>
         </CardContent>
       </Card>
-      
-      {submitProofError && (
+
+      {isError && (
         <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{submitProofError.message}</AlertDescription>
+            <AlertDescription>
+                Transaction failed. Possible reasons:
+                <ul>
+                    <li>- The dare has expired.</li>
+                    <li>- You have already submitted a proof for this dare.</li>
+                    <li>- You are the creator of the dare.</li>
+                    <li>- The dare has already been completed.</li>
+                </ul>
+                <p className="mt-2 text-xs">
+                    Error: {submitProofError?.message}
+                </p>
+            </AlertDescription>
         </Alert>
       )}
     </div>
@@ -283,7 +401,7 @@ export function ProofSubmission({ dareId }: { dareId?: number }) {
 function FilePreview({ file, onRemove }: { file: ProofFile; onRemove: () => void }) {
     const [isPlaying, setIsPlaying] = useState(false)
     const videoRef = useRef<HTMLVideoElement>(null)
-  
+
     const togglePlay = () => {
       if (videoRef.current) {
         if (isPlaying) {
@@ -294,7 +412,7 @@ function FilePreview({ file, onRemove }: { file: ProofFile; onRemove: () => void
         setIsPlaying(!isPlaying)
       }
     }
-  
+
     return (
       <div className="relative group">
         <div className="aspect-square rounded-lg overflow-hidden bg-muted">
@@ -322,7 +440,7 @@ function FilePreview({ file, onRemove }: { file: ProofFile; onRemove: () => void
             </div>
           )}
         </div>
-  
+
         <div className="absolute bottom-2 left-2 right-2">
           <div className="bg-black/50 backdrop-blur-sm rounded px-2 py-1 flex items-center gap-1">
             {file.type === "image" ? (
@@ -333,7 +451,7 @@ function FilePreview({ file, onRemove }: { file: ProofFile; onRemove: () => void
             <span className="text-xs text-white truncate">{file.file.name}</span>
           </div>
         </div>
-  
+
         <Button
           variant="destructive"
           size="icon"
@@ -345,8 +463,14 @@ function FilePreview({ file, onRemove }: { file: ProofFile; onRemove: () => void
       </div>
     )
   }
-  
-  function SubmissionSuccess({ dare }: { dare: DareDetails }) {
+
+function SubmissionSuccess({ dare, submission }: { dare: DareDetails; submission: UserSubmission }) {
+    const handleViewOnGateway = () => {
+        if (submission.fileCID && submission.fileCID !== "N/A") {
+            window.open(`https://gateway.lighthouse.storage/ipfs/${submission.fileCID}`, '_blank');
+        }
+    };
+
     return (
       <div className="p-4 space-y-6">
         <div className="text-center space-y-4">
@@ -360,7 +484,7 @@ function FilePreview({ file, onRemove }: { file: ProofFile; onRemove: () => void
             </p>
           </div>
         </div>
-  
+
         <Card>
           <CardHeader className="text-center pb-4">
             <CardTitle className="text-lg">What happens next?</CardTitle>
@@ -374,7 +498,7 @@ function FilePreview({ file, onRemove }: { file: ProofFile; onRemove: () => void
                 <div className="space-y-1">
                   <p className="font-medium">Community Review</p>
                   <p className="text-sm text-muted-foreground">
-                    The community will vote on submissions to select the top 10 participants
+                    The community will now be able to view and vote on all submissions for this dare.
                   </p>
                 </div>
               </div>
@@ -385,7 +509,7 @@ function FilePreview({ file, onRemove }: { file: ProofFile; onRemove: () => void
                 <div className="space-y-1">
                   <p className="font-medium">Organizer Selection</p>
                   <p className="text-sm text-muted-foreground">
-                    The dare creator will choose the winner from the top 10 submissions
+                    After the deadline, the dare creator will review all submissions and select a single winner.
                   </p>
                 </div>
               </div>
@@ -396,20 +520,59 @@ function FilePreview({ file, onRemove }: { file: ProofFile; onRemove: () => void
                 <div className="space-y-1">
                   <p className="font-medium">Reward Distribution</p>
                   <p className="text-sm text-muted-foreground">
-                    Winner receives {dare.reward} USDC, voters get a share from the pool
+                    Once the winner is chosen and votes are tallied, the {dare.reward} TFIL reward will be distributed.
                   </p>
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
-  
+
         <div className="flex gap-3">
-          <Button variant="outline" className="flex-1 bg-transparent">
+          <Button variant="outline" className="flex-1 bg-transparent" onClick={handleViewOnGateway}>
             View Submission
           </Button>
-          <Button className="flex-1">Back to Dares</Button>
         </div>
       </div>
     )
-  }
+}
+
+function AlreadySubmitted({ dare, submission }: { dare: DareDetails; submission: UserSubmission }) {
+    const handleViewOnGateway = () => {
+        if (submission.fileCID && submission.fileCID !== "N/A") {
+            window.open(`https://gateway.lighthouse.storage/ipfs/${submission.fileCID}`, '_blank');
+        }
+    };
+
+    return (
+      <div className="p-4 space-y-6">
+        <div className="text-center space-y-2">
+            <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-2xl flex items-center justify-center mx-auto">
+                <Check className="w-10 h-10 text-blue-600 dark:text-blue-400" />
+            </div>
+            <h2 className="text-2xl font-bold text-balance">You've Already Submitted!</h2>
+            <p className="text-muted-foreground">Here are the details of your submission for this dare.</p>
+        </div>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>{dare.title}</CardTitle>
+                <CardDescription>Your submission is awaiting community review and voting.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div>
+                    <Label className="text-sm font-medium">Your Description</Label>
+                    <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md mt-1 whitespace-pre-wrap">{submission.description}</p>
+                </div>
+                <div>
+                    <Label className="text-sm font-medium">Your Proof (Filecoin CID)</Label>
+                    <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md mt-1 break-all">{submission.fileCID}</p>
+                </div>
+                 <Button onClick={handleViewOnGateway} className="w-full" disabled={!submission.fileCID || submission.fileCID === "N/A"}>
+                    View Files on IPFS Gateway
+                </Button>
+            </CardContent>
+        </Card>
+      </div>
+    )
+}

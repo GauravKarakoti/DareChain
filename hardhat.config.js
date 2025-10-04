@@ -20,6 +20,11 @@ module.exports = {
     world_testnet: {
       url: process.env.WORLD_TESTNET || "https://worldchain-sepolia.g.alchemy.com/public",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+    },
+    filecoin: {
+      url: "https://rpc.ankr.com/filecoin_testnet",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      chainId: 314159,
     }
   },
   paths: {

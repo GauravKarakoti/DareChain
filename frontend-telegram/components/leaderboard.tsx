@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react"
 import axios from "axios"
+import { useAccount } from "wagmi"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Trophy, Medal, Award, TrendingUp, Zap } from "lucide-react"
 
@@ -26,12 +27,14 @@ export function Leaderboard() {
   const [timeframe, setTimeframe] = useState("weekly")
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const { address } = useAccount()
 
   useEffect(() => {
     const fetchLeaderboardData = async () => {
       setIsLoading(true)
       try {
         const response = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/leaderboard?timeframe=${timeframe}`)
+        console.log("Fetched Leaderboard Data:", response.data)
         setLeaderboardData(response.data.data)
       } catch (error) {
         console.error(`Failed to fetch leaderboard data for timeframe ${timeframe}:`, error)
@@ -80,6 +83,9 @@ export function Leaderboard() {
     )
   }
 
+  const currentUserData = leaderboardData.find(user => user.name.toLowerCase() === address?.toLowerCase());
+  console.log("Current User Data:", currentUserData);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -100,10 +106,11 @@ export function Leaderboard() {
             <CardContent className="p-4 space-y-3">
               <div className="flex justify-center">{getRankIcon(user.rank)}</div>
               <Avatar className="w-12 h-12 mx-auto">
-                <AvatarFallback>{user.avatar}</AvatarFallback>
+                {user.avatar && <AvatarImage src={`https://gateway.lighthouse.storage/ipfs/${user.avatar}`} alt={user.name} />}
+                <AvatarFallback>{user.name.substring(2, 4).toUpperCase()}</AvatarFallback>
               </Avatar>
               <div>
-                <p className="font-semibold text-sm">{user.name}</p>
+                <p className="font-semibold text-sm truncate">{user.name.slice(0, 6)}...{user.name.slice(-4)}</p>
                 <p className="text-xs text-muted-foreground">{user.score} pts</p>
               </div>
               <div className="flex justify-center">{getChangeIndicator(user.change)}</div>
@@ -125,22 +132,18 @@ export function Leaderboard() {
             <div
               key={user.id}
               className={`flex items-center gap-4 p-3 rounded-lg transition-colors ${
-                user.name === "You" ? "bg-primary/10 border border-primary/20" : "hover:bg-muted/50"
+                user.name.toLowerCase() === address?.toLowerCase() ? "bg-primary/10 border border-primary/20" : "hover:bg-muted/50"
               }`}
             >
               <div className="flex items-center gap-3 flex-1">
                 <div className="flex items-center justify-center w-8">{getRankIcon(user.rank)}</div>
                 <Avatar className="w-10 h-10">
-                  <AvatarFallback>{user.avatar}</AvatarFallback>
+                  {user.avatar && <AvatarImage src={`https://gateway.lighthouse.storage/ipfs/${user.avatar}`} alt={user.name} />}
+                  <AvatarFallback>{user.name.substring(2, 4).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="font-medium">{user.name}</p>
-                    {user.name === "You" && (
-                      <Badge variant="secondary" className="text-xs">
-                        You
-                      </Badge>
-                    )}
+                    <p className="font-medium truncate">{user.name.toLowerCase() === address?.toLowerCase() ? 'You' : `${user.name.slice(0,6)}...${user.name.slice(-4)}`}</p>
                   </div>
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <span>{user.completedDares} dares</span>
@@ -162,23 +165,25 @@ export function Leaderboard() {
       </Card>
 
       {/* Your Stats */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Performance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="text-center p-3 bg-muted/50 rounded-lg">
-              <p className="text-2xl font-bold text-primary">$720</p>
-              <p className="text-xs text-muted-foreground">Total Earned</p>
+      {currentUserData && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Your Performance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-3 bg-muted/50 rounded-lg">
+                <p className="text-2xl font-bold text-primary">${currentUserData.totalEarned}</p>
+                <p className="text-xs text-muted-foreground">Total Earned</p>
+              </div>
+              <div className="text-center p-3 bg-muted/50 rounded-lg">
+                <p className="text-2xl font-bold text-primary">{currentUserData.successRate}%</p>
+                <p className="text-xs text-muted-foreground">Success Rate</p>
+              </div>
             </div>
-            <div className="text-center p-3 bg-muted/50 rounded-lg">
-              <p className="text-2xl font-bold text-primary">85%</p>
-              <p className="text-xs text-muted-foreground">Success Rate</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

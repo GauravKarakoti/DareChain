@@ -9,8 +9,8 @@ interface Notification {
   id: number
   type: "reward" | "vote" | "dare" | "system"
   message: string
-  time: string
-  unread: boolean
+  createdAt: string
+  isRead: boolean
 }
 
 interface NotificationCenterProps {
@@ -55,15 +55,15 @@ export function NotificationCenter({ notifications, onClose, onMarkAllRead }: No
               <div
                 key={notification.id}
                 className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
-                  notification.unread ? "bg-primary/5 border border-primary/20" : "bg-muted/30"
+                  !notification.isRead ? "bg-primary/5 border border-primary/20" : "bg-muted/30"
                 }`}
               >
                 <div className="flex-shrink-0 mt-0.5">{getIcon(notification.type)}</div>
                 <div className="flex-1 space-y-1">
                   <p className="text-sm leading-relaxed">{notification.message}</p>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">{notification.time}</span>
-                    {notification.unread && (
+                    <span className="text-xs text-muted-foreground">{new Date(notification.createdAt).toLocaleTimeString()}</span>
+                    {!notification.isRead && (
                       <Badge variant="secondary" className="text-xs px-2 py-0">
                         New
                       </Badge>

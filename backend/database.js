@@ -12,22 +12,32 @@ const db = new sqlite3.Database(DBSOURCE, (err) => {
                 console.error("Error checking for tables:", err.message);
                 return;
             }
-            // If the dares table doesn't exist, it's a new database.
             if (!table) {
                 console.log("Creating and seeding new database...");
                 db.serialize(() => {
                     db.run(`CREATE TABLE users (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        username TEXT UNIQUE,
-                        password TEXT,
+                        walletAddress TEXT UNIQUE,
                         avatar TEXT,
+                        displayName TEXT,
+                        bio TEXT,
+                        dareAccepted INTEGER DEFAULT 0,
                         daresCompleted INTEGER DEFAULT 0,
                         daresCreated INTEGER DEFAULT 0,
                         totalEarned REAL DEFAULT 0,
-                        votingAccuracy INTEGER DEFAULT 85,
-                        currentStreak INTEGER DEFAULT 5,
-                        longestStreak INTEGER DEFAULT 8,
-                        rank INTEGER DEFAULT 156
+                        votingAccuracy INTEGER DEFAULT 0,
+                        currentStreak INTEGER DEFAULT 0,
+                        longestStreak INTEGER DEFAULT 0,
+                        rank INTEGER DEFAULT 0
+                    )`);
+
+                    db.run(`CREATE TABLE user_notification_settings (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        userId INTEGER UNIQUE,
+                        dareUpdates BOOLEAN DEFAULT 1,
+                        comments BOOLEAN DEFAULT 1,
+                        submissionStatus BOOLEAN DEFAULT 1,
+                        FOREIGN KEY (userId) REFERENCES users (id)
                     )`);
 
                     db.run(`CREATE TABLE dares (
@@ -42,7 +52,10 @@ const db = new sqlite3.Database(DBSOURCE, (err) => {
                         status TEXT,
                         category TEXT,
                         location TEXT,
-                        featured BOOLEAN
+                        featured BOOLEAN,
+                        likes INTEGER DEFAULT 0,
+                        comments INTEGER DEFAULT 0,
+                        createdAt TEXT DEFAULT CURRENT_TIMESTAMP
                     )`);
 
                     db.run(`CREATE TABLE submissions (
@@ -50,6 +63,7 @@ const db = new sqlite3.Database(DBSOURCE, (err) => {
                         dareId INTEGER,
                         userId INTEGER,
                         description TEXT,
+                        fileCID TEXT,
                         timestamp TEXT,
                         status TEXT,
                         FOREIGN KEY (dareId) REFERENCES dares (id),
@@ -64,27 +78,63 @@ const db = new sqlite3.Database(DBSOURCE, (err) => {
                         FOREIGN KEY (submissionId) REFERENCES submissions (id),
                         FOREIGN KEY (userId) REFERENCES users (id)
                     )`);
+                    
+                    db.run(`CREATE TABLE user_dares (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        userId INTEGER,
+                        dareId INTEGER,
+                        status TEXT DEFAULT 'accepted',
+                        acceptedAt TEXT,
+                        FOREIGN KEY (userId) REFERENCES users (id),
+                        FOREIGN KEY (dareId) REFERENCES dares (id),
+                        UNIQUE (userId, dareId)
+                    )`);
 
-                    // Seed initial data
-                    const insertUser = `INSERT INTO users (username, password, avatar) VALUES (?,?,?)`;
-                    db.run(insertUser, ["user", "password", "U"]);
+                    db.run(`CREATE TABLE dare_likes (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        userId INTEGER,
+                        dareId INTEGER,
+                        FOREIGN KEY (userId) REFERENCES users (id),
+                        FOREIGN KEY (dareId) REFERENCES dares (id),
+                        UNIQUE (userId, dareId)
+                    )`);
 
-                    const insertDare = `INSERT INTO dares (title, description, reward, creator, deadline, difficulty, participants, status, category, location, featured) VALUES (?,?,?,?,?,?,?,?,?,?,?)`;
-                    const dares = [
-                        ["Dance for 30 seconds in public", "Show off your moves in a busy public space and record it! Extra points for creativity and crowd reaction.", 5, "Alice", "2 days", "Easy", 12, "active", "Performance", "Any public space", true],
-                        ["Learn a new language phrase", "Record yourself speaking a 10-word phrase in a language you don't know. Must include pronunciation guide.", 3, "Bob", "1 week", "Medium", 8, "active", "Learning", null, false],
-                        ["Random act of kindness", "Do something nice for a stranger and capture the moment. Show the impact of your kindness.", 10, "Charlie", "3 days", "Easy", 25, "voting", "Social Good", null, true],
-                        ["Create art with recycled materials", "Make something beautiful from trash. Show before and after photos of your materials.", 8, "Diana", "5 days", "Medium", 15, "active", "Creative", null, false],
-                        ["Compliment 5 strangers genuinely", "Spread positivity by giving genuine compliments to 5 different people. Record their reactions.", 6, "Eve", "1 day", "Hard", 3, "active", "Social Good", null, false]
-                    ];
+                    db.run(`CREATE TABLE dare_comments (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        dareId INTEGER,
+                        userId INTEGER,
+                        comment TEXT,
+                        timestamp TEXT,
+                        replyingTo INTEGER,
+                        likes INTEGER DEFAULT 0,
+                        FOREIGN KEY (dareId) REFERENCES dares (id),
+                        FOREIGN KEY (userId) REFERENCES users (id),
+                        FOREIGN KEY (replyingTo) REFERENCES dare_comments (id)
+                    )`);
+                    
+                    db.run(`CREATE TABLE dare_comment_likes (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        userId INTEGER,
+                        commentId INTEGER,
+                        FOREIGN KEY (userId) REFERENCES users (id),
+                        FOREIGN KEY (commentId) REFERENCES dare_comments (id),
+                        UNIQUE (userId, commentId)
+                    )`);
 
-                    dares.forEach((dare) => {
-                        db.run(insertDare, dare);
-                    });
-                    console.log('Database tables created and seeded.');
+                    db.run(`CREATE TABLE notifications (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        userId INTEGER,
+                        type TEXT,
+                        message TEXT,
+                        isRead BOOLEAN DEFAULT 0,
+                        createdAt TEXT,
+                        FOREIGN KEY (userId) REFERENCES users (id)
+                    )`);
+
+                    console.log('Database tables created.');
                 });
             } else {
-                console.log("Database already exists. Skipping creation and seeding.");
+                console.log("Database already exists. Skipping creation.");
             }
         });
     }
