@@ -49,7 +49,7 @@ const checkDareDeadlines = () => {
 };
 
 // Run the deadline check every minute
-setInterval(checkDareDeadlines, 1000*60*24);
+setInterval(checkDareDeadlines, 60000);
 
 
 // --- Notification Endpoints ---

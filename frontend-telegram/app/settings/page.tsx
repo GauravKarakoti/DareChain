@@ -4,6 +4,8 @@ import { useState, useEffect } from "react"
 import { useAccount, useDisconnect } from "wagmi"
 import { useTheme } from "next-themes"
 import axios from "axios";
+import { useRouter } from "next/navigation"; 
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,12 +13,13 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { Sun, Moon, Laptop, Bell, User, Palette, LogOut, Trash2 } from "lucide-react"
+import { Sun, Moon, Laptop, Bell, User, Palette, LogOut, Trash2, ArrowLeft } from "lucide-react" 
 
 export default function SettingsPage() {
   const { address } = useAccount()
   const { disconnect } = useDisconnect()
   const { setTheme } = useTheme()
+  const router = useRouter(); 
 
   const [displayName, setDisplayName] = useState("")
   const [bio, setBio] = useState("")
@@ -87,9 +90,14 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto p-4 md:p-6">
-      <div>
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-muted-foreground">Manage your account settings and application preferences.</p>
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => router.push('/')}>
+          <ArrowLeft className="w-4 h-4" />
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold">Settings</h1>
+          <p className="text-muted-foreground">Manage your account settings and application preferences.</p>
+        </div>
       </div>
       <Separator />
 
