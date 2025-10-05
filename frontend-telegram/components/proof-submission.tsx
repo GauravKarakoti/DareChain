@@ -284,7 +284,7 @@ export function ProofSubmission({ dareId }: { dareId?: number }) {
 
 
   if (isSubmittedSuccess) {
-    return <SubmissionSuccess dare={dare} submission={userSubmission as UserSubmission} />
+    return <SubmissionSuccess dare={dare} submission={{ description, fileCID: fileCID || "" }} />
   }
 
   return (

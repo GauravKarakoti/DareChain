@@ -543,22 +543,35 @@ app.post("/api/submissions", (req, res) => {
         }
 
         const userId = user.id;
-        const timestamp = new Date().toISOString();
-        const status = 'pending'; // Initial status for a new submission
-
-        const sql = `INSERT INTO submissions (dareId, userId, description, fileCID, timestamp, status) VALUES (?, ?, ?, ?, ?, ?)`;
-        const params = [dareId, userId, description, fileCID, timestamp, status];
-
-        db.run(sql, params, function (err) {
+        
+        // Check for existing submission
+        const findSubmissionSql = "SELECT id FROM submissions WHERE userId = ? AND dareId = ?";
+        db.get(findSubmissionSql, [userId, dareId], (err, submission) => {
             if (err) {
-                console.error("Database error creating submission:", err.message);
-                return res.status(500).json({ "error": "Database error creating submission" });
+                console.error("Database error checking for existing submission:", err.message);
+                return res.status(500).json({ "error": "Database error checking for existing submission." });
             }
-            res.status(201).json({
-                "message": "Submission successfully created",
-                "submissionId": this.lastID
+            if (submission) {
+                return res.status(409).json({ "error": "You have already submitted proof for this dare." });
+            }
+
+            const timestamp = new Date().toISOString();
+            const status = 'pending'; // Initial status for a new submission
+
+            const sql = `INSERT INTO submissions (dareId, userId, description, fileCID, timestamp, status) VALUES (?, ?, ?, ?, ?, ?)`;
+            const params = [dareId, userId, description, fileCID, timestamp, status];
+
+            db.run(sql, params, function (err) {
+                if (err) {
+                    console.error("Database error creating submission:", err.message);
+                    return res.status(500).json({ "error": "Database error creating submission" });
+                }
+                res.status(201).json({
+                    "message": "Submission successfully created",
+                    "submissionId": this.lastID
+                });
+                console.log(`Submission for dare ${dareId} by user ${userId} created with ID ${this.lastID}.`);
             });
-            console.log(`Submission for dare ${dareId} by user ${userId} created with ID ${this.lastID}.`);
         });
     });
 });
